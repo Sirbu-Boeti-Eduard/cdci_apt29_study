@@ -15,12 +15,13 @@ These instructions apply to the whole APT29/SUNBURST study.
 - Do not bundle unrelated task folders or unrelated edits into one commit or pull request. If one task requires several files, include only those needed and explain why they belong together.
 - Review the changed-file list and diff before handing work back. Do not commit, push, open a pull request, or change GitHub settings unless asked.
 
-## Check sources
+## Check references and evidence
 
-- Verify each factual claim against the source itself. Search-result snippets are not enough.
-- Prefer primary sources, official incident reports, and peer-reviewed research for technical claims.
-- Check that each citation supports the nearby claim and that its author, date, context, and URL are correct. Record citations as you work in the relevant task folder.
-- Separate what a source reports from your interpretation. Do not invent references; flag attribution or evidence that remains uncertain.
+- Open each source and check that its direct link works. Search-result snippets are not evidence. Use the source type that fits the claim: official reports and advisories, vendor threat research, reputable security blogs, technical documentation, or academic papers. Blogs and security write-ups are acceptable; use peer-reviewed papers where the assignment specifically requires them, especially in `task08-papers`.
+- Make every reference support the claim beside it. Include the author or publisher, title, and date when available. For a long PDF or report, give the exact page and section, figure, or table. If you used only a short passage, point to that location or choose a shorter source that supports the same claim. Do not make teammates search an entire document for one fact.
+- Keep references lean: use the fewest strong sources needed, and do not add links that merely mention the topic. Follow any task template or required citation style.
+- Separate what a source reports from your interpretation. Do not invent references or proof. For PoC evidence, point to the specific log, screenshot, or artifact and state what it demonstrates without claiming more than it shows.
+- Check that each source's author, date, context, and URL are correct. Record references in the relevant task folder, and flag attribution or evidence that remains uncertain.
 
 ## Use the project skills
 
