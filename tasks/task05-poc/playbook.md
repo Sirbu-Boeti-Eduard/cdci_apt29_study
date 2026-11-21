@@ -25,19 +25,18 @@ Start Docker Desktop on macOS, open `tasks/task05-poc`, and run `docker compose 
 
 If a port is taken, set `PIPELINE_PORT=8180 CLIENT_PORT=8181 ATTACKER_PORT=8182 DASHBOARD_PORT=8183` before starting. Run `docker compose down` before rebuilding or to stop.
 
-Presenter controls: `python3 presenter.py reset`, `python3 presenter.py install v1|v2|v3`, and `python3 presenter.py check`. The dashboard has only **Reset lab**; use the CLI for the rest.
+The Presentation Dashboard has only **Reset lab**. Reset the lab there, and use the client and pipeline apps for update checks, installs, and publishing.
 
 ## Walkthrough
 
-1. **Reset.** Run `python3 presenter.py reset` or click **Reset lab**. This resets the channel to V1/V2, installs V2, sets the coordinator to PASSIVE, clears beacons, tasks, and the capture, and restarts the capture.
-2. **Show a normal update, if useful.** Run `python3 presenter.py install v1`, then click **Check now** in Orion Network Manager. V2 appears as available; click **Install available update**. The client verifies and installs V2.
-3. **Set the response mode.** In Operator Console choose **ACTIVE** and click **APPLY**. No beacons exist yet.
-4. **Publish the tampered build.** In Build & Release choose `pipeline/sample-v3-malicious.zip`, click **Upload artifact**, then **Sign artifact**. Choose **Stable · mandatory** and click **Publish to stable**. The pipeline validates the manifest, signs it, and publishes it. V3 cannot be republished; reset before uploading another.
-5. **Watch delivery.** On the next poll the client downloads the catalog, ZIP, and signature, checks the digest and RSA signature, and installs V3. Update history shows normal events only: found, downloaded, verified, installed.
-6. **Watch the beacon.** Three seconds after install the client queries `checkin.orion-lab.test`. In ACTIVE mode the coordinator returns the activation address; the client follows the CNAME handoff and posts its details to the HTTP receiver. The console lists `orion-01`, user, OS, address, process, PID, and architecture. The beacon loop re-checks every four seconds until the coordinator returns NXDOMAIN or the install changes.
-7. **Send a command.** Choose **All beacons** or `orion-01` under **Target**, type `id` or `id; uname -a`, and click **SEND COMMAND**. On the next check-in the receiver returns the task, the victim runs it with `/bin/sh -lc`, and the output and exit code appear under **Command results**. A task queued in PASSIVE waits for an ACTIVE check-in.
-8. **Compare modes.** PASSIVE returns the passive address with no HTTP follow-on, so new beacons and tasks do not proceed. DISABLED returns NXDOMAIN and stops the current beacon. To start a new beacon, set **ACTIVE** again and run `python3 presenter.py install v3`. Reset returns the coordinator to PASSIVE.
-9. **Review and reset.** Use the **C2 capture** link for the pcap; it holds only DNS and receiver traffic (updater traffic on port 8000 is excluded). Reset again to clear state.
+1. **Reset.** Click **Reset lab** in the Presentation Dashboard. This resets the channel to V1/V2, installs V2, sets the coordinator to PASSIVE, clears beacons, tasks, and the capture, and restarts the capture.
+2. **Set the response mode.** In Operator Console choose **ACTIVE** and click **APPLY**. No beacons exist yet.
+3. **Publish the tampered build.** In Build & Release choose `pipeline/sample-v3-malicious.zip`, click **Upload artifact**, then **Sign artifact**. Choose **Stable · mandatory** and click **Publish to stable**. The pipeline validates the manifest, signs it, and publishes it. V3 cannot be republished; reset before uploading another.
+4. **Watch delivery.** On the next poll the client downloads the catalog, ZIP, and signature, checks the digest and RSA signature, and installs V3. Update history shows normal events only: found, downloaded, verified, installed.
+5. **Watch the beacon.** Three seconds after install the client queries `checkin.orion-lab.test`. In ACTIVE mode the coordinator returns the activation address; the client follows the CNAME handoff and posts its details to the HTTP receiver. The console lists `orion-01`, user, OS, address, process, PID, and architecture. The beacon loop re-checks every four seconds until the coordinator returns NXDOMAIN or the install changes.
+6. **Send a command.** Choose **All beacons** or `orion-01` under **Target**, type `id` or `id; uname -a`, and click **SEND COMMAND**. On the next check-in the receiver returns the task, the victim runs it with `/bin/sh -lc`, and the output and exit code appear under **Command results**. A task queued in PASSIVE waits for an ACTIVE check-in.
+7. **Compare modes.** PASSIVE returns the passive address with no HTTP follow-on, so new beacons and tasks do not proceed. DISABLED returns NXDOMAIN and stops the current beacon. To run the beacon again, reset the lab and publish V3 again. Reset returns the coordinator to PASSIVE.
+8. **Review and reset.** Use the **C2 capture** link for the pcap; it holds only DNS and receiver traffic (updater traffic on port 8000 is excluded). Reset again to clear state.
 
 ## Kill-chain mapping
 
