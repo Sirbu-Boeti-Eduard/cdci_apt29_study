@@ -150,6 +150,27 @@ steps, which this section mirrors:
     movement here relied on compromised credentials across multiple
     systems.
 
+### 5.1 Mapping Countermeasures to the Group's PoC
+
+The group's Task 5 proof of concept simulates a software supply-chain compromise using Mininet and Docker. A supplier pipeline publishes a tampered V3 update, which the client downloads and accepts after verifying its SHA-256 digest and RSA signature. The client then performs a simulated DNS check-in, follows a CNAME handoff, establishes HTTP communication with an operator, and executes commands in the isolated lab environment.
+
+The following table connects the simulated attack stages to the countermeasures proposed in this task.
+
+| PoC stage | Relevant countermeasure | Expected security benefit |
+|---|---|---|
+| Tampered V3 artifact enters the release pipeline | Build pipeline isolation and strict access controls | Reduce opportunities for unauthorized changes to release artifacts. |
+| Pipeline signs and publishes the tampered update | Independent artifact verification and reproducible builds | Help detect discrepancies between approved build inputs and released artifacts. |
+| Client accepts the signed update | Least privilege and restricted update permissions | Limit the consequences of installing compromised software. |
+| Client performs a DNS check-in and CNAME handoff | DNS logging and anomaly detection | Help identify unexpected DNS activity associated with command-and-control communication. |
+| Client establishes an HTTP connection with the operator | Network traffic monitoring and segmentation | Detect suspicious outbound connections and restrict communication with unauthorized destinations. |
+| Operator sends commands to the client | Endpoint Detection and Response (EDR) | Help identify suspicious process execution and investigate post-compromise activity. |
+
+**PoC limitations:** This demonstration is a controlled simulation, not a complete recreation of SUNBURST. The client installs a manifest-based update and activates a predefined check-in routine. It does not execute arbitrary code uploaded in the update package, reproduce SUNSPOT's source-file replacement mechanism, or implement the original SUNBURST DGA. The demonstration also does not recreate TEARDROP or Cobalt Strike.
+
+**Evaluation:** The PoC illustrates why code signing alone cannot guarantee software integrity and how monitoring and access controls could reduce the impact of a compromised update. However, these countermeasures are proposed defenses; their effectiveness has not been experimentally validated in the group's PoC.
+
+**Reference:** Group 2, Task 5, `tasks/task05-poc/playbook.md` (PoC design and demonstration instructions).
+
 ## 6. Evaluation of Countermeasures
 
 A deployment-difficulty rating is only useful if it's justified rather
