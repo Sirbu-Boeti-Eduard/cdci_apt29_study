@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Task 5 Lab Control</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body class="dash-app">
+  <main class="dash-shell">
+    <header class="dash-header">
+      <div>
+        <p class="eyebrow">TASK 5</p>
+        <h1>Lab control</h1>
+        <p class="subtitle">Reset the lab and view running containers.</p>
+      </div>
+      <button id="reset-lab" class="reset-button">Reset lab</button>
+    </header>
+    <p id="message" class="message" role="status" aria-live="polite"></p>
+    <section class="panel">
+      <div class="panel-heading">
+        <h2>Running containers</h2>
+        <span id="count" class="count">0</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Container</th><th>Status</th></tr></thead>
+          <tbody id="containers"><tr><td colspan="2">No running containers.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

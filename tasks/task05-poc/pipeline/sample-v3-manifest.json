@@ -1,0 +1,13 @@
+{
+  "product": "Orion Network Manager",
+  "version": "v3",
+  "release_notes": "Adds service health summaries",
+  "client_config": {
+    "theme": "midnight",
+    "topology": true,
+    "health_summary": true
+  },
+  "exercise": {
+    "diagnostic_checkin": true
+  }
+}

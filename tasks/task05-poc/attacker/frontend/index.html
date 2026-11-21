@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Operator Console</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body class="attacker-app">
+  <header class="operator-masthead">
+    <span class="operator-indicator"></span>
+    <span class="operator-brand">NODE<span class="brand-separator">/</span>CONTROL</span>
+    <span class="operator-location">COORDINATION SERVER</span>
+    <span class="operator-link-state"><i></i><span id="beacon-count">NO BEACONS</span></span>
+  </header>
+  <main>
+    <header class="console-heading">
+      <div><p class="eyebrow">COORDINATION SERVER</p><h1>Operator Console</h1><p>Discovered beacons and remote tasking.</p></div>
+      <span class="target" id="beacon-summary">0 beacons</span>
+    </header>
+    <div class="console-grid">
+      <section class="panel">
+        <div class="panel-heading"><span class="signal"></span><h2>Response profile</h2></div>
+        <div class="mode-row">
+          <label for="mode">Beacon response policy</label>
+          <select id="mode"><option value="passive">PASSIVE</option><option value="selected">ACTIVE</option><option value="disabled">DISABLED</option></select>
+          <button id="apply">APPLY</button>
+        </div>
+        <p id="message" class="status" role="status" aria-live="polite"></p>
+        <p class="field-label">Latest response</p>
+        <p id="result" class="result">No check-in received</p>
+      </section>
+      <section class="panel">
+        <div class="panel-heading"><span class="signal"></span><h2>Infrastructure</h2></div>
+        <dl class="endpoints">
+          <div><dt>DNS relay</dt><dd id="infra-dns">-</dd></div>
+          <div><dt>HTTP listener</dt><dd id="infra-http">-</dd></div>
+          <div><dt>Transport</dt><dd id="infra-channel">-</dd></div>
+        </dl>
+      </section>
+    </div>
+
+    <section class="panel">
+      <div class="panel-heading"><span class="signal"></span><h2>Discovered beacons</h2><span class="stream-state">LIVE</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Host</th><th>User</th><th>OS</th><th>Address</th><th>Version</th><th>Last seen</th></tr></thead>
+          <tbody id="beacons"><tr><td colspan="6">No beacons have checked in.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel task-panel">
+      <div class="panel-heading"><span class="signal"></span><h2>Remote tasking</h2><span class="stream-state">TASKING</span></div>
+      <div class="mode-row">
+        <label for="task-target">Target</label>
+        <select id="task-target"><option value="all">All beacons</option></select>
+        <input id="task-command" type="text" maxlength="500" autocomplete="off" spellcheck="false" placeholder="whoami">
+        <button id="send-task">SEND COMMAND</button>
+      </div>
+      <p id="task-message" class="status" role="status" aria-live="polite"></p>
+      <p class="field-label">In flight</p>
+      <pre id="pending-task" class="task-output">No command in flight</pre>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading"><span class="signal"></span><h2>Command results</h2><span class="stream-state">LATEST</span></div>
+      <pre id="results" class="results-output">No command results yet.</pre>
+    </section>
+
+    <section class="panel timeline-panel">
+      <div class="panel-heading"><span class="signal"></span><h2>DNS and HTTP activity</h2><span class="stream-state">LIVE</span></div>
+      <p class="capture-link">C2 capture: <a id="capture-link" href="/capture.pcap">c2-traffic.pcap</a></p>
+      <pre id="timeline">Waiting for beacon traffic…</pre>
+    </section>
+  </main>
+</body>
+</html>
