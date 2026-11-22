@@ -2,6 +2,69 @@
 
 This walkthrough follows a signed software release from a supplier pipeline to a managed client, then shows the client's DNS check-in and operator tasking. It is a simulation; the lab installs no real implant.
 
+## Topology
+
+```mermaid
+graph LR
+    subgraph s1["Mininet s1 · 10.0.0.0/24 · isolated"]
+        V["victim · orion-01<br/>10.0.0.5"]
+        U["updater<br/>10.0.0.2:8000 · HTTP"]
+        D["dns coordinator<br/>10.0.0.3:53 · UDP"]
+        C["receiver / C2<br/>10.0.0.4:9000 · HTTP"]
+    end
+    V -->|"GET catalog, zip, .sig"| U
+    V -->|"A? checkin / handoff / receiver"| D
+    V -->|"POST /checkin, /result"| C
+    V -.->|"udp 53 or tcp 9000"| CAP["tcpdump · victim-eth0 → pcap"]
+
+    classDef host fill:#f5f5f5,stroke:#333,color:#111;
+    classDef atk fill:#fdecef,stroke:#b4506a,color:#111;
+    classDef cap fill:#ffffff,stroke:#999,color:#555,stroke-dasharray:4 3;
+    class V,U host;
+    class D,C atk;
+    class CAP cap;
+```
+
+## Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant V as victim · orion-01<br/>10.0.0.5
+    participant U as updater<br/>10.0.0.2:8000
+    participant D as dns coordinator<br/>10.0.0.3:53
+    participant C as receiver · C2<br/>10.0.0.4:9000
+    participant O as operator console
+
+    Note over V,O: operator acts through the console / lab control API (:8080), not on the 10.0.0.0/24 wire
+    O->>U: publish signed V3 to the stable channel
+    O->>D: set coordinator mode = selected (ACTIVE)
+    O->>C: queue task  (id, uname -a)
+
+    Note over V: update agent polls the catalog every 1.5 s
+    V->>U: GET /catalog.json
+    U-->>V: 200  releases[]  (v3 mandatory)
+    V->>U: GET /orion-v3-(sha).zip and .sig
+    U-->>V: 200  package + signature
+    Note over V: verify SHA-256 vs catalog, then RSA vs pinned public key → install v3
+    Note over V: manifest diagnostic_checkin = true →<br/>backdoor sleeps 3 s, then starts the beacon thread
+
+    loop beacon — repeats every 4 s, until mode = passive / disabled or reset
+        V->>D: A?  checkin.orion-lab.test
+        D-->>V: A  192.0.2.20  (selected)
+        Note right of D: passive → 192.0.2.10 (no follow-on)<br/>disabled → NXDOMAIN (kill switch)
+        V->>D: A?  handoff.orion-lab.test
+        D-->>V: CNAME  receiver.orion-lab.test
+        V->>D: A?  receiver.orion-lab.test
+        D-->>V: A  10.0.0.4
+        V->>C: POST /checkin  { hostname, user, os, ip, pid, arch }
+        C-->>V: 200  { task = id, uname -a }
+        Note over V: exec via /bin/sh -lc  (guardrail blocks rm -rf /, mkfs, reboot, dd of=/dev)
+        V->>C: POST /result  { output, exit_code }
+        C-->>V: 200
+    end
+```
+
 ## Applications
 
 | Application | Address | Role |
