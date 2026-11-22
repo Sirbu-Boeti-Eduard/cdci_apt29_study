@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 1266" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+<defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#9fb2cf"/></marker></defs>
+<rect x="0" y="0" width="1240" height="1266" fill="#ffffff"/>
+<text x="28" y="44" font-size="27" font-weight="700" fill="#1f2a3a">APT29 / SUNBURST: the SolarWinds attack along the Cyber Kill Chain</text>
+<text x="28" y="72" font-size="15" fill="#53617a">A signed supply-chain backdoor → dormant triage over DNS → hands-on espionage for a chosen few. Each phase shows the technique names and MITRE ATT&amp;CK IDs.</text>
+<line x1="121" y1="204" x2="121" y2="980" stroke="#9fb2cf" stroke-width="2"/>
+<rect x="28" y="96" width="186" height="108" rx="10" fill="#2f5c9e"/>
+<text x="121" y="148" font-size="40" font-weight="800" fill="#ffffff" text-anchor="middle">1</text>
+<text x="121" y="176" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">RECONNAISSANCE</text>
+<rect x="230" y="96" width="982" height="108" rx="10" fill="#ffffff" stroke="#d7deea" stroke-width="1.2"/>
+<rect x="230" y="96" width="5" height="108" rx="2.5" fill="#2f5c9e"/>
+<text x="248" y="126" font-size="17" font-weight="700" fill="#1f2a3a">Break into SolarWinds</text>
+<text x="248" y="147" font-size="13.5" xml:space="preserve"><tspan fill="#53617a">Entry method never established · earliest internal activity </tspan><tspan font-weight="700" fill="#14325c">Sept 2019</tspan></text>
+<rect x="248" y="170" width="279" height="22" rx="11" fill="#eef3fb" stroke="#c9d6ec" stroke-width="1"/>
+<text x="260" y="185" font-size="12.5" font-weight="600" fill="#1f3a63">Gather Victim Credentials</text>
+<text x="445" y="185" font-size="11.5" font-family="Consolas, monospace" fill="#5878ab">T1589.001</text>
+<rect x="535" y="170" width="171" height="22" rx="11" fill="#eef3fb" stroke="#c9d6ec" stroke-width="1"/>
+<text x="547" y="185" font-size="12.5" font-weight="600" fill="#1f3a63">Valid Accounts</text>
+<text x="653" y="185" font-size="11.5" font-family="Consolas, monospace" fill="#5878ab">T1078</text>
+<line x1="121" y1="206" x2="121" y2="224" stroke="#9fb2cf" stroke-width="2" marker-end="url(#ar)"/>
+<rect x="28" y="226" width="186" height="108" rx="10" fill="#2f5c9e"/>
+<text x="121" y="278" font-size="40" font-weight="800" fill="#ffffff" text-anchor="middle">2</text>
+<text x="121" y="306" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">WEAPONIZATION</text>
+<rect x="230" y="226" width="982" height="108" rx="10" fill="#ffffff" stroke="#d7deea" stroke-width="1.2"/>
+<rect x="230" y="226" width="5" height="108" rx="2.5" fill="#2f5c9e"/>
+<text x="248" y="256" font-size="17" font-weight="700" fill="#1f2a3a">Plant SUNBURST inside the build</text>
+<text x="248" y="277" font-size="13.5" xml:space="preserve"><tspan font-weight="700" fill="#14325c">SUNSPOT</tspan><tspan fill="#53617a"> swaps </tspan><tspan font-weight="700" fill="#14325c">InventoryManager.cs</tspan><tspan fill="#53617a"> while MsBuild compiles Orion, then restores it</tspan></text>
+<rect x="248" y="300" width="329" height="22" rx="11" fill="#eef3fb" stroke="#c9d6ec" stroke-width="1"/>
+<text x="260" y="315" font-size="12.5" font-weight="600" fill="#1f3a63">Compromise Software Supply Chain</text>
+<text x="495" y="315" font-size="11.5" font-family="Consolas, monospace" fill="#5878ab">T1195.002</text>
+<rect x="585" y="300" width="272" height="22" rx="11" fill="#eef3fb" stroke="#c9d6ec" stroke-width="1"/>
+<text x="597" y="315" font-size="12.5" font-weight="600" fill="#1f3a63">Stored Data Manipulation</text>
+<text x="775" y="315" font-size="11.5" font-family="Consolas, monospace" fill="#5878ab">T1565.001</text>
+<rect x="865" y="300" width="192" height="22" rx="11" fill="#eef3fb" stroke="#c9d6ec" stroke-width="1"/>
+<text x="877" y="315" font-size="12.5" font-weight="600" fill="#1f3a63">Process Discovery</text>
+<text x="1005" y="315" font-size="11.5" font-family="Consolas, monospace" fill="#5878ab">T1057</text>
+<line x1="121" y1="336" x2="121" y2="354" stroke="#9fb2cf" stroke-width="2" marker-end="url(#ar)"/>
+<rect x="28" y="356" width="186" height="108" rx="10" fill="#2f5c9e"/>
+<text x="121" y="408" font-size="40" font-weight="800" fill="#ffffff" text-anchor="middle">3</text>
+<text x="121" y="436" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">DELIVERY</text>
+<rect x="230" y="356" width="982" height="108" rx="10" fill="#ffffff" stroke="#d7deea" stroke-width="1.2"/>
+<rect x="230" y="356" width="5" height="108" rx="2.5" fill="#2f5c9e"/>
+<text x="248" y="386" font-size="17" font-weight="700" fill="#1f2a3a">Ship it as a signed update</text>
+<rect x="1007" y="370" width="189" height="23" rx="11.5" fill="#fff3e0" stroke="#e0a94a" stroke-width="1"/>
+<text x="1102" y="386" font-size="12" font-weight="600" fill="#8a5300" text-anchor="middle">~18,000 customers install</text>
+<text x="248" y="407" font-size="13.5" xml:space="preserve"><tspan fill="#53617a">Trojanized </tspan><tspan font-weight="700" fill="#14325c">SolarWinds.Orion.Core.BusinessLayer.dll</tspan><tspan fill="#53617a">, carrying a valid SolarWinds signature</tspan></text>
+<rect x="248" y="430" width="329" height="22" rx="11" fill="#eef3fb" stroke="#c9d6ec" stroke-width="1"/>
+<text x="260" y="445" font-size="12.5" font-weight="600" fill="#1f3a63">Compromise Software Supply Chain</text>
+<text x="495" y="445" font-size="11.5" font-family="Consolas, monospace" fill="#5878ab">T1195.002</text>
+<rect x="585" y="430" width="358" height="22" rx="11" fill="#eef3fb" stroke="#c9d6ec" stroke-width="1"/>
+<text x="597" y="445" font-size="12.5" font-weight="600" fill="#1f3a63">Subvert Trust Controls: Code Signing</text>
+<text x="860" y="445" font-size="11.5" font-family="Consolas, monospace" fill="#5878ab">T1553.002</text>
+<line x1="121" y1="466" x2="121" y2="484" stroke="#9fb2cf" stroke-width="2" marker-end="url(#ar)"/>
+<rect x="28" y="486" width="186" height="108" rx="10" fill="#2f5c9e"/>
+<text x="121" y="538" font-size="40" font-weight="800" fill="#ffffff" text-anchor="middle">4</text>
+<text x="121" y="566" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">EXPLOITATION</text>
+<rect x="230" y="486" width="982" height="108" rx="10" fill="#ffffff" stroke="#d7deea" stroke-width="1.2"/>
+<rect x="230" y="486" width="5" height="108" rx="2.5" fill="#2f5c9e"/>
+<text x="248" y="516" font-size="17" font-weight="700" fill="#1f2a3a">Trusted software runs the backdoor</text>
+<text x="248" y="537" font-size="13.5" xml:space="preserve"><tspan font-weight="700" fill="#14325c">No software vulnerability</tspan><tspan fill="#53617a">: Orion&#x27;s own service executes it with full privileges</tspan></text>
+<rect x="248" y="560" width="329" height="22" rx="11" fill="#eef3fb" stroke="#c9d6ec" stroke-width="1"/>
+<text x="260" y="575" font-size="12.5" font-weight="600" fill="#1f3a63">Compromise Software Supply Chain</text>
+<text x="495" y="575" font-size="11.5" font-family="Consolas, monospace" fill="#5878ab">T1195.002</text>
+<rect x="585" y="560" width="292" height="22" rx="11" fill="#eef3fb" stroke="#c9d6ec" stroke-width="1"/>
+<text x="597" y="575" font-size="12.5" font-weight="600" fill="#1f3a63">Obfuscated Files or Information</text>
+<text x="825" y="575" font-size="11.5" font-family="Consolas, monospace" fill="#5878ab">T1027</text>
+<line x1="121" y1="596" x2="121" y2="614" stroke="#9fb2cf" stroke-width="2" marker-end="url(#ar)"/>
+<rect x="28" y="616" width="186" height="141" rx="10" fill="#2f5c9e"/>
+<text x="121" y="668" font-size="40" font-weight="800" fill="#ffffff" text-anchor="middle">5</text>
+<text x="121" y="696" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">INSTALLATION</text>
+<rect x="230" y="616" width="982" height="141" rx="10" fill="#ffffff" stroke="#d7deea" stroke-width="1.2"/>
+<rect x="230" y="616" width="5" height="141" rx="2.5" fill="#2f5c9e"/>
+<text x="248" y="646" font-size="17" font-weight="700" fill="#1f2a3a">SUNBURST persists and evades analysis</text>
+<text x="248" y="667" font-size="13.5" xml:space="preserve"><tspan font-weight="700" fill="#14325c">12–14 day dormancy</tspan><tspan fill="#53617a"> · Active Directory / lab-name / antivirus checks · disables security services · single-instance </tspan><tspan font-weight="700" fill="#14325c">named pipe</tspan></text>
+<rect x="248" y="690" width="229" height="22" rx="11" fill="#eef3fb" stroke="#c9d6ec" stroke-width="1"/>
+<text x="260" y="705" font-size="12.5" font-weight="600" fill="#1f3a63">Time-Based Evasion</text>
+<text x="395" y="705" font-size="11.5" font-family="Consolas, monospace" fill="#5878ab">T1497.003</text>
+<rect x="485" y="690" width="193" height="22" rx="11" fill="#eef3fb" stroke="#c9d6ec" stroke-width="1"/>
+<text x="497" y="705" font-size="12.5" font-weight="600" fill="#1f3a63">System Checks</text>
+<text x="596" y="705" font-size="11.5" font-family="Consolas, monospace" fill="#5878ab">T1497.001</text>
+<rect x="686" y="690" width="293" height="22" rx="11" fill="#eef3fb" stroke="#c9d6ec" stroke-width="1"/>
+<text x="698" y="705" font-size="12.5" font-weight="600" fill="#1f3a63">Security Software Discovery</text>
+<text x="897" y="705" font-size="11.5" font-family="Consolas, monospace" fill="#5878ab">T1518.001</text>
+<rect x="248" y="723" width="315" height="22" rx="11" fill="#eef3fb" stroke="#c9d6ec" stroke-width="1"/>
+<text x="260" y="738" font-size="12.5" font-weight="600" fill="#1f3a63">Impair Defenses: Disable Tools</text>
+<text x="480" y="738" font-size="11.5" font-family="Consolas, monospace" fill="#5878ab">T1562.001</text>
+<line x1="121" y1="759" x2="121" y2="777" stroke="#9fb2cf" stroke-width="2" marker-end="url(#ar)"/>
+<rect x="28" y="779" width="186" height="179" rx="10" fill="#2f5c9e"/>
+<text x="121" y="831" font-size="40" font-weight="800" fill="#ffffff" text-anchor="middle">6</text>
+<text x="121" y="859" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">COMMAND &amp;</text>
+<text x="121" y="876" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">CONTROL</text>
+<rect x="230" y="779" width="982" height="179" rx="10" fill="#ffffff" stroke="#d7deea" stroke-width="1.2"/>
+<rect x="230" y="779" width="5" height="179" rx="2.5" fill="#2f5c9e"/>
+<text x="248" y="809" font-size="17" font-weight="700" fill="#1f2a3a">Two-stage command-and-control: DNS triage, then HTTPS</text>
+<rect x="980" y="793" width="216" height="23" rx="11.5" fill="#fff3e0" stroke="#e0a94a" stroke-width="1"/>
+<text x="1088" y="809" font-size="12" font-weight="600" fill="#8a5300" text-anchor="middle">filtered to &lt;100 real targets</text>
+<text x="248" y="830" font-size="13.5" xml:space="preserve"><tspan font-weight="700" fill="#14325c">Stage 1 · DNS</tspan><tspan fill="#53617a">: a domain-generation algorithm encodes each victim in names under </tspan><tspan font-weight="700" fill="#14325c">avsvmcloud[.]com</tspan></text>
+<text x="248" y="849" font-size="13.5" xml:space="preserve"><tspan fill="#53617a">the reply&#x27;s address range = passive / active / kill-switch; an alias record selects the victim</tspan></text>
+<text x="248" y="868" font-size="13.5" xml:space="preserve"><tspan font-weight="700" fill="#14325c">Stage 2 · HTTPS</tspan><tspan fill="#53617a">: disguised as Orion telemetry; commands concealed in normal-looking data</tspan></text>
+<rect x="248" y="891" width="322" height="22" rx="11" fill="#eef3fb" stroke="#c9d6ec" stroke-width="1"/>
+<text x="260" y="906" font-size="12.5" font-weight="600" fill="#1f3a63">Application Layer Protocol: DNS</text>
+<text x="488" y="906" font-size="11.5" font-family="Consolas, monospace" fill="#5878ab">T1071.004</text>
+<rect x="578" y="891" width="300" height="22" rx="11" fill="#eef3fb" stroke="#c9d6ec" stroke-width="1"/>
+<text x="590" y="906" font-size="12.5" font-weight="600" fill="#1f3a63">Domain Generation Algorithms</text>
+<text x="796" y="906" font-size="11.5" font-family="Consolas, monospace" fill="#5878ab">T1568.002</text>
+<rect x="886" y="891" width="193" height="22" rx="11" fill="#eef3fb" stroke="#c9d6ec" stroke-width="1"/>
+<text x="898" y="906" font-size="12.5" font-weight="600" fill="#1f3a63">Web Protocols</text>
+<text x="997" y="906" font-size="11.5" font-family="Consolas, monospace" fill="#5878ab">T1071.001</text>
+<rect x="248" y="924" width="193" height="22" rx="11" fill="#eef3fb" stroke="#c9d6ec" stroke-width="1"/>
+<text x="260" y="939" font-size="12.5" font-weight="600" fill="#1f3a63">Steganography</text>
+<text x="359" y="939" font-size="11.5" font-family="Consolas, monospace" fill="#5878ab">T1001.002</text>
+<line x1="121" y1="960" x2="121" y2="978" stroke="#9fb2cf" stroke-width="2" marker-end="url(#ar)"/>
+<rect x="28" y="980" width="186" height="160" rx="10" fill="#9e2f2f"/>
+<text x="121" y="1032" font-size="40" font-weight="800" fill="#ffffff" text-anchor="middle">7</text>
+<text x="121" y="1060" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">ACTIONS ON</text>
+<text x="121" y="1077" font-size="13" font-weight="700" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">OBJECTIVES</text>
+<rect x="230" y="980" width="982" height="160" rx="10" fill="#ffffff" stroke="#d7deea" stroke-width="1.2"/>
+<rect x="230" y="980" width="5" height="160" rx="2.5" fill="#9e2f2f"/>
+<text x="248" y="1010" font-size="17" font-weight="700" fill="#1f2a3a">Second stage, then espionage</text>
+<text x="248" y="1031" font-size="13.5" xml:space="preserve"><tspan fill="#53617a">Over the command-and-control channel, </tspan><tspan font-weight="700" fill="#14325c">TEARDROP / Raindrop</tspan><tspan fill="#53617a"> load </tspan><tspan font-weight="700" fill="#14325c">Cobalt Strike Beacon</tspan><tspan fill="#53617a"> for interactive control</tspan></text>
+<text x="248" y="1050" font-size="13.5" xml:space="preserve"><tspan fill="#53617a">Credential hopping + </tspan><tspan font-weight="700" fill="#14325c">DCSync</tspan><tspan fill="#53617a"> · </tspan><tspan font-weight="700" fill="#14325c">Golden SAML</tspan><tspan fill="#53617a"> forged tokens bypass multi-factor authentication · steal </tspan><tspan font-weight="700" fill="#14325c">Microsoft 365 / Exchange</tspan><tspan fill="#53617a"> email</tspan></text>
+<rect x="248" y="1073" width="221" height="22" rx="11" fill="#eef3fb" stroke="#c9d6ec" stroke-width="1"/>
+<text x="260" y="1088" font-size="12.5" font-weight="600" fill="#1f3a63">Ingress Tool Transfer</text>
+<text x="416" y="1088" font-size="11.5" font-family="Consolas, monospace" fill="#5878ab">T1105</text>
+<rect x="477" y="1073" width="293" height="22" rx="11" fill="#eef3fb" stroke="#c9d6ec" stroke-width="1"/>
+<text x="489" y="1088" font-size="12.5" font-weight="600" fill="#1f3a63">Forge Web Credentials: SAML</text>
+<text x="688" y="1088" font-size="11.5" font-family="Consolas, monospace" fill="#5878ab">T1606.002</text>
+<rect x="778" y="1073" width="143" height="22" rx="11" fill="#eef3fb" stroke="#c9d6ec" stroke-width="1"/>
+<text x="790" y="1088" font-size="12.5" font-weight="600" fill="#1f3a63">DCSync</text>
+<text x="839" y="1088" font-size="11.5" font-family="Consolas, monospace" fill="#5878ab">T1003.006</text>
+<rect x="248" y="1106" width="265" height="22" rx="11" fill="#eef3fb" stroke="#c9d6ec" stroke-width="1"/>
+<text x="260" y="1121" font-size="12.5" font-weight="600" fill="#1f3a63">Remote Email Collection</text>
+<text x="430" y="1121" font-size="11.5" font-family="Consolas, monospace" fill="#5878ab">T1114.002</text>
+<rect x="28" y="1168" width="1184" height="48" rx="8" fill="#f6f8fc" stroke="#e2e8f2"/>
+<text x="42" y="1188" font-size="12.5" fill="#53617a"><tspan font-weight="700" fill="#1f2a3a">Note on ordering:</tspan> phases are shown in the canonical Lockheed Martin order.</text>
+<text x="42" y="1206" font-size="12.5" fill="#53617a">In SUNBURST’s real timeline the second stage (Cobalt Strike) is delivered over the command-and-control channel <tspan font-weight="700" fill="#1f2a3a">after</tspan> the DNS/HTTPS triage, and to selected victims only.</text>
+<rect x="28" y="1233" width="16" height="16" rx="3" fill="#2f5c9e"/>
+<text x="52" y="1246" font-size="12.5" fill="#53617a">Intrusion phases</text>
+<rect x="178" y="1233" width="16" height="16" rx="3" fill="#9e2f2f"/>
+<text x="202" y="1246" font-size="12.5" fill="#53617a">Impact (actions on objectives)</text>
+<rect x="428" y="1233" width="26" height="16" rx="8" fill="#fff3e0" stroke="#e0a94a"/>
+<text x="462" y="1246" font-size="12.5" fill="#53617a">signature mechanic</text>
+<text x="1212" y="1246" font-size="12" fill="#9aa6ba" text-anchor="end">Threat actor: APT29 (Cozy Bear / SVR) · case study: SolarWinds Orion, 2020</text>
+</svg>

@@ -1,0 +1,18 @@
+%% APT29 / SUNBURST (SolarWinds) mapped onto the Lockheed Martin Cyber Kill Chain.
+%% Labels are quoted; no parentheses in node text. Each phase lists the key techniques by name and ID.
+%% A higher-resolution SVG version for slides is in killchain.svg.
+flowchart TD
+    P1["1. RECONNAISSANCE<br/>Breach SolarWinds, method unknown, Sept 2019<br/>Valid Accounts T1078 · Gather Victim Credentials T1589.001"]
+    P2["2. WEAPONIZATION<br/>SUNSPOT swaps InventoryManager.cs in the build to inject SUNBURST<br/>Compromise Software Supply Chain T1195.002 · Stored Data Manipulation T1565.001"]
+    P3["3. DELIVERY<br/>Trojanized, SolarWinds-signed Orion update to ~18,000 customers<br/>Compromise Software Supply Chain T1195.002 · Code Signing T1553.002"]
+    P4["4. EXPLOITATION<br/>Orion's own service runs the backdoor; no software vulnerability<br/>Compromise Software Supply Chain T1195.002 · Obfuscated Files T1027"]
+    P5["5. INSTALLATION<br/>SUNBURST persists and evades: two-week dormancy, Active Directory / lab-name / security-tool checks, disables defences<br/>Time-Based Evasion T1497.003 · System Checks T1497.001 · Security Software Discovery T1518.001"]
+    P6["6. COMMAND AND CONTROL<br/>Stage 1 over DNS for victim triage; Stage 2 over HTTPS disguised as Orion telemetry; selected victims then receive the second stage<br/>Application Layer Protocol DNS T1071.004 · Domain Generation Algorithms T1568.002 · Web Protocols T1071.001 · Steganography T1001.002"]
+    P7["7. ACTIONS ON OBJECTIVES<br/>Over the control channel, load Cobalt Strike; then forge authentication tokens and steal Microsoft 365 / Exchange email<br/>Ingress Tool Transfer T1105 · Forge SAML Tokens T1606.002 · DCSync T1003.006 · Remote Email Collection T1114.002"]
+
+    P1 --> P2 --> P3 --> P4 --> P5 --> P6 --> P7
+
+    classDef phase fill:#eef3fb,stroke:#2f5c9e,stroke-width:1px,color:#13233a;
+    classDef actions fill:#fbeeee,stroke:#9e2f2f,stroke-width:1px,color:#3a1313;
+    class P1,P2,P3,P4,P5,P6 phase;
+    class P7 actions;
