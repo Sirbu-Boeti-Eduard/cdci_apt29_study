@@ -1,8 +1,8 @@
-# APT29 — vulnerabilities, applications and protocols
+# APT29: vulnerabilities, applications and protocols
 
 This covers the "exploited vulnerabilities, applications and network protocols" part of the task.
 
-An important point for the SolarWinds case study: **SUNBURST used no software vulnerability at all** — it
+The SolarWinds attack is the exception: **SUNBURST used no software vulnerability at all**. It
 was a supply-chain implant hidden in a signed update (MITRE technique `T1195.002`). The vulnerabilities
 below belong to APT29's *other* campaigns and are included as group context. Full citations are in
 [`sources.md`](sources.md).
@@ -40,7 +40,7 @@ further vulnerabilities in SVR use, CVE-2019-1653 (Cisco routers), CVE-2019-2725
 
 **Two cautions for the report.**
 - The October 2024 joint advisory lists a further ~24 vulnerabilities that the agencies say the SVR has
-  the "capability and interest to exploit" — this is a **watch list, not confirmed exploitation**, and
+  the "capability and interest to exploit". This is a **watch list, not confirmed exploitation**, and
   is often misreported as such.
 - CVE-2020-10148 (a SolarWinds Orion authentication bypass) is sometimes linked to this campaign, but it
   was used to deploy the **SUPERNOVA** web shell, which is attributed to a **different** actor, not APT29.
@@ -49,18 +49,18 @@ further vulnerabilities in SVR use, CVE-2019-1653 (Cisco routers), CVE-2019-2725
 
 ## 2. Applications and platforms abused
 
-Beyond specific vulnerabilities, APT29 repeatedly abuses legitimate applications and services — both as
+Beyond specific vulnerabilities, APT29 repeatedly abuses legitimate applications and services, both as
 targets and as infrastructure:
 
-- **SolarWinds Orion** — the trojanized product in the case study.
-- **Federation servers (Active Directory Federation Services)** — the target of the Golden SAML
+- **SolarWinds Orion:** the trojanized product in the case study.
+- **Federation servers (Active Directory Federation Services):** the target of the Golden SAML
   technique and of the FoggyWeb and MagicWeb backdoors, to forge single-sign-on tokens.
-- **Microsoft 365 / Exchange Online and Entra ID (Azure AD)** — mailbox theft, abuse of cloud
+- **Microsoft 365 / Exchange Online and Entra ID (Azure AD):** mailbox theft, abuse of cloud
   applications and their access tokens, and registration of attacker devices for multi-factor
   authentication.
-- **Microsoft Teams** — in 2023, chats from compromised tenants posing as technical support, to trick
+- **Microsoft Teams:** in 2023, chats from compromised tenants posing as technical support, to trick
   users into approving a multi-factor prompt.
-- **Legitimate cloud and web services as control channels** — Dropbox, Google Drive, OneDrive, Notion,
+- **Legitimate cloud and web services as control channels:** Dropbox, Google Drive, OneDrive, Notion,
   Trello, Firebase, Zulip, and the Constant Contact mass-mailing service, as well as free hosting such
   as ngrok and compromised WordPress sites. Using well-known services makes the traffic hard to block.
 

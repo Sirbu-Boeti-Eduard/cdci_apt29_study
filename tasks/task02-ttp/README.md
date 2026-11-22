@@ -1,7 +1,8 @@
-# APT29 / SUNBURST — Tactics, Techniques and Procedures
+# APT29 / SUNBURST: Tactics, Techniques and Procedures
 
 *Case study: the SolarWinds (Orion) supply-chain compromise, 2020*
-Threat actor: **APT29** (also known as Cozy Bear, The Dukes, Nobelium, Midnight Blizzard) — attributed to Russia's Foreign Intelligence Service (SVR).
+Threat actor: **APT29** (also known as Cozy Bear, The Dukes, Nobelium, Midnight Blizzard), attributed
+to Russia's Foreign Intelligence Service (SVR).
 
 This document walks through how APT29 carried out the SolarWinds attack, step by step along the
 **Cyber Kill Chain**. Each step gives *what happened*, *why it worked*, and the techniques used,
@@ -26,7 +27,7 @@ through the normal update channel.
 SUNBURST stayed dormant for about two weeks, confirmed it was running on a genuine corporate network,
 and then contacted the attackers over the **Domain Name System (DNS)**. This let the operators see
 which organisation each infection belonged to and select **fewer than 100** of them for further
-action — including nine U.S. federal agencies. On those chosen targets it opened an encrypted web
+action, including nine U.S. federal agencies. On those chosen targets it opened an encrypted web
 channel (HTTP/HTTPS) disguised as Orion's normal telemetry, installed **Cobalt Strike** (a commercial
 intrusion-testing tool) for hands-on espionage, and finally moved into the victims' **Microsoft 365**
 cloud using forged authentication tokens that bypassed multi-factor authentication.
@@ -55,31 +56,31 @@ flowchart TD
 
 A higher-resolution version for slides is in [`diagrams/killchain.svg`](diagrams/killchain.svg); the
 editable diagram source is [`diagrams/killchain.mmd`](diagrams/killchain.mmd).
-The kill-chain phases are shown in their standard order; in the actual timeline the second-stage tool
+The kill-chain phases are shown in their standard order. In the actual timeline the second-stage tool
 (Cobalt Strike) is delivered through the command-and-control channel **after** the triage in phase 6,
-and only to the selected victims — as the walkthrough below reflects.
+and only to the selected victims, as the walkthrough below reflects.
 
 ---
 
 ## 3. Step by step along the kill chain
 
-### Step 1 — Initial access to SolarWinds · *Reconnaissance*
+### Step 1: Initial access to SolarWinds · *Reconnaissance*
 **What happened.** The attackers first compromised SolarWinds' own network. The method of entry was
 never established; the earliest suspicious activity found internally dates to **September 2019**.
 **Why it worked.** Compromising one trusted software vendor opens the door to all of its customers at once.
 **Techniques.** Gather Victim Credentials (`T1589.001`), Valid Accounts (`T1078`).
 
-### Step 2 — Tampering with the build (SUNSPOT) · *Weaponization*
+### Step 2: Tampering with the build (SUNSPOT) · *Weaponization*
 **What happened.** From February 2020 a tool named **SUNSPOT** ran on SolarWinds' build server. It
 waited for the compiler to build Orion and, during the build, replaced one source file
-(`InventoryManager.cs`) with a version containing SUNBURST — then restored the original so the code on
+(`InventoryManager.cs`) with a version containing SUNBURST, then restored the original so the code on
 disk looked unchanged.
 **Why it worked.** The malicious code was compiled by SolarWinds' own trusted process, so it inherited
 the company's legitimacy. Nothing in source control was altered.
 **Techniques.** Compromise Software Supply Chain (`T1195.002`), Stored Data Manipulation (`T1565.001`),
 Process Discovery (`T1057`), Masquerading (`T1036.005`).
 
-### Step 3 — Distribution as a signed update · *Delivery*
+### Step 3: Distribution as a signed update · *Delivery*
 **What happened.** The infected file (`SolarWinds.Orion.Core.BusinessLayer.dll`) was signed with
 SolarWinds' genuine code-signing certificate and published as a routine update. Affected Orion
 versions: 2019.4 HF5, 2020.2 (no hotfix), and 2020.2 HF1. Approximately 18,000 customers installed it.
@@ -87,28 +88,28 @@ versions: 2019.4 HF5, 2020.2 (no hotfix), and 2020.2 HF1. Approximately 18,000 c
 file is trustworthy, so the backdoor passed every check. Customers were following normal security advice.
 **Techniques.** Compromise Software Supply Chain (`T1195.002`), Subvert Trust Controls: Code Signing (`T1553.002`).
 
-### Step 4 — Execution at the victim · *Exploitation*
+### Step 4: Execution at the victim · *Exploitation*
 **What happened.** On installation, Orion's own service loaded the infected component, and a small
-amount of added code started the backdoor, running with Orion's privileges — which, for a monitoring
+amount of added code started the backdoor, running with Orion's privileges, which, for a monitoring
 product, are extensive.
 **Why it worked.** **No software vulnerability was exploited.** The backdoor simply runs as part of
 trusted software, so there is no malicious download, email, or exploit for defenders to detect.
 **Techniques.** Compromise Software Supply Chain (`T1195.002`), Obfuscated Files or Information (`T1027`).
 
-### Step 5 — Persistence and evasion · *Installation*
+### Step 5: Persistence and evasion · *Installation*
 **What happened.** Before taking any action, SUNBURST confirmed it was on a real target:
-- It waited **12–14 days** — longer than an automated analysis sandbox observes a file.
+- It waited **12–14 days**, longer than an automated analysis sandbox observes a file.
 - It checked the computer was joined to a corporate **Active Directory** domain, and stopped if the
   domain name resembled a SolarWinds test lab.
 - It compared running programs, services, and drivers against hidden lists of **antivirus and
   endpoint-detection** products, pausing if one was present and disabling blocked security services.
 
-**Why it worked.** Each check defeats a specific detection method — automated sandboxes, analyst
+**Why it worked.** Each check defeats a specific detection method: automated sandboxes, analyst
 machines, and endpoint-security software.
 **Techniques.** Time-Based Evasion (`T1497.003`), System Checks (`T1497.001`), Security Software
 Discovery (`T1518.001`), Impair Defenses: Disable Tools (`T1562.001`).
 
-### Step 6 — Calling home and selecting victims · *Command and Control (stage 1)*
+### Step 6: Calling home and selecting victims · *Command and Control (stage 1)*
 **What happened.** First contact used the **Domain Name System (DNS)**, which nearly every network
 permits. SUNBURST generated subdomain names under **`avsvmcloud[.]com`** using a **domain generation
 algorithm** (an algorithm that produces many unique domain names), encoding a machine identifier and
@@ -120,20 +121,20 @@ range** returned acted as an instruction:
 | Private or reserved ranges (for example 10.0.0.0/8, 192.168.0.0/16) and a few specific ranges such as 20.140.0.0/15 | **Stop permanently** (kill switch) |
 | Certain public ranges | Continue signalling over DNS |
 | Other ranges | Return to a quiet, passive state |
-| An alias record pointing to another domain | **Selected victim** — connect to that server (Step 7) |
+| An alias record pointing to another domain | **Selected victim**: connect to that server (Step 7) |
 
 **Why it worked.** DNS traffic is rarely blocked or inspected, and encoding the victim's identity
 allowed roughly 18,000 infections to be narrowed to **fewer than 100** genuine targets.
 **Techniques.** Application Layer Protocol: DNS (`T1071.004`), Domain Generation Algorithms (`T1568.002`),
 Data Encoding (`T1132`).
 
-### Step 7 — Interactive control over the web channel · *Command and Control (stage 2)*
+### Step 7: Interactive control over the web channel · *Command and Control (stage 2)*
 **What happened.** For a selected victim, SUNBURST connected to a real control server and communicated
 over **HTTPS**, shaped to look like Orion's own "Improvement Program" telemetry: outgoing data packed
 into telemetry-like messages. The replies resembled harmless program data, but the commands were
 **concealed inside that normal-looking content** (hidden in values shaped like identifiers and hex,
-which the backdoor extracted and decoded) — a use of **steganography**, hiding information inside
-other data so its presence is not obvious. The same idea appears in the second stage, where a payload
+which the backdoor extracted and decoded). This is **steganography**: hiding information inside other
+data so its presence is not obvious. The same idea appears in the second stage, where a payload
 is hidden inside a file disguised as an image (`gracious_truth.jpg`, Step 8). Server names matched
 names inside the victim's network and were often hosted in the victim's own country. SUNBURST
 understood a small set of commands (profile the system, read and write files and registry values, run
@@ -143,15 +144,15 @@ distinguish from legitimate activity.
 **Techniques.** Application Layer Protocol: Web Protocols (`T1071.001`), Data Obfuscation: Protocol
 Impersonation (`T1001.003`), Steganography (`T1001.002`), Hide Infrastructure (`T1665`).
 
-### Step 8 — Second-stage tooling: Cobalt Strike · *Installation (after triage)*
+### Step 8: Second-stage tooling: Cobalt Strike · *Installation (after triage)*
 **What happened.** On selected victims, and **through the control channel established above**, SUNBURST
 delivered a loader to launch **Cobalt Strike**:
-- **TEARDROP** — runs only in memory as a service and reads its payload from a file disguised as an
+- **TEARDROP**: runs only in memory as a service and reads its payload from a file disguised as an
   image (`gracious_truth.jpg`); delivered directly by SUNBURST.
-- **Raindrop** — the same role, built from modified 7-Zip code, and seen on *other* machines within a
+- **Raindrop**: the same role, built from modified 7-Zip code, and seen on *other* machines within a
   victim's network as the attackers moved laterally.
 
-Both loaders exist to start **Cobalt Strike** — a *commercial* intrusion-testing framework (its agent
+Both loaders exist to start **Cobalt Strike**, a *commercial* intrusion-testing framework (its agent
 is called Beacon) that attackers widely pirate and abuse. Cobalt Strike, not the loaders, is the tool
 that gave the operators hands-on, interactive control. The connection between SUNBURST and Cobalt
 Strike was deliberately broken so that discovering one did not reveal the other.
@@ -161,12 +162,12 @@ broken link frustrated investigation.
 Create or Modify System Process: Windows Service (`T1543.003`), Obfuscated Files: Steganography
 (`T1027.003`), Indicator Removal: Clear Persistence (`T1070.009`).
 
-### Step 9 — Lateral movement and credential theft · *Actions on Objectives*
+### Step 9: Lateral movement and credential theft · *Actions on Objectives*
 **What happened.** Human operators took over. They mapped Active Directory with the **AdFind** utility
 (renamed to blend in), stole credentials (Kerberoasting; **DCSync**, which copies password data from a
 domain controller), and moved between machines using Remote Desktop Protocol, Windows Management
-Instrumentation, and PowerShell remoting — using a **different stolen account for each step** so that
-no single account produced a suspicious trail. They disabled logging and firewall rules while working
+Instrumentation, and PowerShell remoting. Each step used a **different stolen account**, so no single
+account produced a suspicious trail. They disabled logging and firewall rules while working
 and altered file timestamps.
 **Why it worked.** Using valid administrator credentials and built-in tools makes the activity
 resemble normal administration.
@@ -174,10 +175,10 @@ resemble normal administration.
 Remote Services: Remote Desktop Protocol / Windows Management Instrumentation (`T1021.001`, `T1047`),
 Indicator Removal (`T1070`).
 
-### Step 10 — Moving into the cloud and stealing email · *Actions on Objectives*
+### Step 10: Moving into the cloud and stealing email · *Actions on Objectives*
 **What happened.** The objective was email, much of it in **Microsoft 365**. With domain-level
 privileges, the attackers stole the certificate that an organisation's federation server uses to sign
-login tokens, and forged login tokens to authenticate as **any** user — bypassing multi-factor
+login tokens, and forged login tokens to authenticate as **any** user, bypassing multi-factor
 authentication, because the cloud service assumes it was already satisfied. This technique is known as
 **Golden SAML** (SAML, Security Assertion Markup Language, is the standard behind single sign-on). They
 also added their own trusted login provider and credentials to cloud applications that could read mail,
@@ -189,7 +190,7 @@ trace on the victims' own computers.
 (`T1606.002`), Domain or Tenant Policy Modification: Trust Modification (`T1484.002`), Additional Cloud
 Credentials (`T1098.001`), Remote Email Collection (`T1114.002`).
 
-### Step 11 — Discovery and containment · *Context*
+### Step 11: Discovery and containment · *Context*
 The campaign was made public in December 2020. Defenders seized the `avsvmcloud[.]com` domain and
 pointed it to an address inside SUNBURST's kill-switch range, so any remaining copies shut themselves
 down. The kill switch stopped SUNBURST only; Cobalt Strike, stolen accounts, and forged cloud logins
@@ -200,13 +201,14 @@ the operation to the SVR (APT29).
 
 ## 4. Recurring techniques across APT29 campaigns
 
-These are the methods APT29 reuses across operations — the basis on which new campaigns are attributed to it.
+These are the methods APT29 reuses across operations. They are the basis on which new campaigns are
+attributed to it.
 
 | Technique | How it appears | MITRE ATT&CK |
 |---|---|---|
 | Supply-chain and trusted-channel compromise | SUNBURST (Orion); JetBrains TeamCity exploitation, 2023 | Compromise Software Supply Chain (`T1195.002`); Exploit Public-Facing Application (`T1190`) |
 | Spearphishing, in evolving formats | Malicious documents, then smuggled disk images, then signed remote-desktop files (2024) | Phishing (`T1566.001`/`.002`); User Execution (`T1204`) |
-| Legitimate web and cloud services for control | Twitter, GitHub, OneDrive, Dropbox, Notion, Trello — across many years | Web Service (`T1102`); Exfiltration to Cloud Storage (`T1567.002`) |
+| Legitimate web and cloud services for control | Twitter, GitHub, OneDrive, Dropbox, Notion, Trello, over many years | Web Service (`T1102`); Exfiltration to Cloud Storage (`T1567.002`) |
 | Hiding data inside images (steganography) | HAMMERTOSS, RegDuke, GraphicalProton, FoggyWeb | Steganography (`T1001.002`, `T1027.003`) |
 | Identity and authentication-token abuse | Golden SAML; federation-server backdoors (FoggyWeb, MagicWeb); cloud-application abuse | Forge Web Credentials: SAML (`T1606.002`); Modify Authentication Process (`T1556.007`) |
 | Side-loading loaders + commercial tooling | Signed programs side-load loaders that launch Cobalt Strike, Brute Ratel, or Sliver | DLL Side-Loading (`T1574.001`); Rundll32 (`T1218.011`) |
@@ -229,7 +231,7 @@ A fuller catalogue of APT29's malware across campaigns is provided in the accomp
 
 ## 6. Exploited vulnerabilities
 
-The SolarWinds attack used **no vulnerability** — it was a supply-chain implant. Across other
+The SolarWinds attack used **no vulnerability**. It was a supply-chain implant. Across other
 campaigns, however, APT29 exploits known vulnerabilities for initial access. The most frequently cited
 set, from the April 2021 United States / United Kingdom joint advisory, is:
 
@@ -246,21 +248,21 @@ set, from the April 2021 United States / United Kingdom joint advisory, is:
 
 ## 7. Network protocols abused
 
-- **Domain Name System (DNS)** — subdomains generated by an algorithm, with the returned address range
+- **Domain Name System (DNS):** subdomains generated by an algorithm, with the returned address range
   signalling the malware's behaviour, and an alias record handing off to the web channel.
-- **HTTPS (web traffic)** — control traffic disguised as Orion telemetry, with commands concealed
+- **HTTPS (web traffic):** control traffic disguised as Orion telemetry, with commands concealed
   inside otherwise normal-looking responses.
-- **Security Assertion Markup Language (SAML)** — forged single-sign-on tokens signed with a stolen
+- **Security Assertion Markup Language (SAML):** forged single-sign-on tokens signed with a stolen
   certificate.
-- **OAuth 2.0 authorisation** — abuse of cloud applications and their access tokens.
+- **OAuth 2.0 authorisation:** abuse of cloud applications and their access tokens.
 - **Remote Desktop Protocol, Server Message Block, Windows Management Instrumentation, PowerShell
-  remoting** — used for movement between machines inside a network.
+  remoting:** used for movement between machines inside a network.
 
 ---
 
 ## 8. Key indicators of compromise
 
-- **Affected Orion versions:** 2019.4 HF5, 2020.2 (no hotfix), 2020.2 HF1 — trojanized file
+- **Affected Orion versions:** 2019.4 HF5, 2020.2 (no hotfix), and 2020.2 HF1. The trojanized file was
   `SolarWinds.Orion.Core.BusinessLayer.dll`.
 - **SUNBURST file hash (SHA-256):** `32519b85c0b422e4656de6e6c41878e95fd95026267daab4215ee59c107d6c77`
 - **SUNSPOT file (`taskhostsvc.exe`, SHA-256):** `c45c9bda8db1d470f1fd0dcc346dc449839eb5ce9a948c70369230af0b3ef168`

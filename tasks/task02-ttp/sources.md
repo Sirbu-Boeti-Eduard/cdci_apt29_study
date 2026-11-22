@@ -63,7 +63,7 @@ Core sources for the report and slides:
 |---|---|---|---|
 | F-Secure Labs, "The Dukes: 7 years of Russian cyberespionage", Sep 2015 (opened via WithSecure mirror: https://www.withsecure.com/wp-content/uploads/2026/05/dukes-whitepaper.pdf) | https://www.f-secure.com/documents/996508/1030745/dukes_whitepaper.pdf | Tools, CVEs | verified |
 | F-Secure, "The Dukes: 7 years of Russian cyber-espionage" (blog), 2015 | https://blog.f-secure.com/the-dukes-7-years-of-russian-cyber-espionage | CVEs | verified |
-| F-Secure, weblog post on MiniDuke, 1 Apr 2014 | https://f-secure.com/weblog/archives/00002688 | CVEs | verified |
+| F-Secure, weblog post on MiniDuke, 1 Apr 2014 (original dead; opened via Internet Archive mirror) | http://web.archive.org/web/20190905091001/https://www.f-secure.com/weblog/archives/00002688.html | CVEs | verified |
 | Kaspersky GReAT, "The MiniDuke Mystery: PDF 0-day Government Spy Assembler 0x29A Micro Backdoor", Feb 2013 | https://securelist.com/the-miniduke-mystery-pdf-0-day-government-spy-assembler-0x29a-micro-backdoor/31112/ | CVEs | verified |
 | FireEye Threat Intelligence, "HAMMERTOSS: Stealthy Tactics Define a Russian Cyber Threat Group", Jul 2015 | https://services.google.com/fh/files/misc/rpt-apt29-hammertoss-stealthy-tactics-define-en.pdf | Tools | verified |
 | Mandiant, "Dissecting One of APT29's Fileless WMI and PowerShell Backdoors (POSHSPY)", 3 Apr 2017 | https://cloud.google.com/blog/topics/threat-intelligence/dissecting-one-ofap/ | Tools | verified |
@@ -89,7 +89,7 @@ Core sources for the report and slides:
 | Mandiant, "APT29 Uses WINELOADER to Target German Political Parties", 22 Mar 2024 | https://cloud.google.com/blog/topics/threat-intelligence/apt29-wineloader-german-political-parties | Tools, IOCs | verified |
 | Microsoft Threat Intelligence, "Midnight Blizzard conducts large-scale spear-phishing campaign using RDP files", 29 Oct 2024 | https://microsoft.com/en-us/security/blog/2024/10/29/midnight-blizzard-conducts-large-scale-spear-phishing-campaign-using-rdp-files | Tools, CVEs, IOCs | verified |
 | Check Point Research, "Unmasking APT29: The Sophisticated Phishing Campaign Targeting European Diplomacy", Apr 2025 | https://research.checkpoint.com/2025/apt29-phishing-campaign/ | Tools | verified |
-| Volexity, "Multiple Russian Threat Actors Targeting Microsoft Device Code Authentication", 13 Feb 2025 | https://www.volexity.com/blog/2025/02/13/multiple-russian-threat-actors-targeting-microsoft-device-code-authentication/ | Tools, CVEs | UNVERIFIED (confirmed only through the secondary sources below) |
+| Volexity, "Multiple Russian Threat Actors Targeting Microsoft Device Code Authentication", 13 Feb 2025 | https://www.volexity.com/blog/2025/02/13/multiple-russian-threat-actors-targeting-microsoft-device-code-authentication/ | Tools, CVEs | verified |
 | Google Threat Intelligence Group, "Creative phishing: academics and critics of Russia" (UNC6293), Jun 2025 | https://cloud.google.com/blog/topics/threat-intelligence/creative-phishing-academics-critics-of-russia | CVEs | verified |
 
 ## Vulnerabilities
@@ -100,7 +100,7 @@ Core sources for the report and slides:
 | Google TAG, "State-backed attackers and commercial surveillance vendors repeatedly use the same exploits", 29 Aug 2024 | https://blog.google/threat-analysis-group/state-backed-attackers-and-commercial-surveillance-vendors-repeatedly-use-the-same-exploits/ | CVEs | verified |
 | CERT/CC, VU#843464 "SolarWinds Orion API authentication bypass", 26 Dec 2020 (not APT29: context for CVE-2020-10148) | https://kb.cert.org/vuls/id/843464 | CVEs | verified |
 | Sophos (Secureworks CTU), "SUPERNOVA web shell deployment linked to SPIRAL threat group" (not APT29) | https://www.sophos.com/en-us/blog/supernova-web-shell-deployment-linked-to-spiral-threat-group | CVEs | verified |
-| CVSS scores: NVD records, read from a GitHub mirror of NVD because nvd.nist.gov was blocked here | https://nvd.nist.gov/ | CVEs | check scores on NVD before quoting |
+| CVSS scores: NVD records, read from a GitHub mirror of NVD because nvd.nist.gov was blocked here | https://nvd.nist.gov/ | CVEs | verified (the quoted scores match the NVD CVSS v3.1 base scores) |
 | CISA Known Exploited Vulnerabilities catalog | https://www.cisa.gov/known-exploited-vulnerabilities-catalog | CVEs | verified |
 
 ## Detection content (repositories)

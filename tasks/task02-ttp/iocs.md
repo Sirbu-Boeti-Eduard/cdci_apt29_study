@@ -1,4 +1,4 @@
-# SolarWinds / SUNBURST — indicators of compromise
+# SolarWinds / SUNBURST: indicators of compromise
 
 A defender-oriented reference: the artifacts that identify the SolarWinds attack, plus a short set from
 APT29's recent campaigns. All network indicators are **defanged** (`hxxp`, `[.]`) so they cannot be
@@ -20,7 +20,7 @@ clicked or resolved by accident. Full citations are in [`sources.md`](sources.md
 | Hash | Orion build |
 |---|---|
 | `32519b85c0b422e4656de6e6c41878e95fd95026267daab4215ee59c107d6c77` | 2019.4 HF5 |
-| `abe22cf0d78836c3ea072daeaf4c5eeaf9c29b6feb597741651979fc8fbd2417` | 2020.2 RC1 |
+| `dab758bf98d9b36fa057a66cd0284737abf89857b73ca89280267ee7caf62f3b` | 2020.2 RC1 |
 | `019085a76ba7126fff22770d71bd901c325fc68ac55aa743327984e89f4b0134` | 2020.2 RC2 |
 | `ce77d116a074dab7a22a0fd4f2c1ab475f16eec42e1ded3c0b0aa8211fe858d6` | 2020.2 |
 
@@ -76,23 +76,23 @@ Second-stage loaders were placed under Windows-like paths such as `C:\Windows\SK
 address inside one of SUNBURST's kill-switch ranges, which shut down any copy that still checked in.
 
 **Behavioural address ranges (configuration, not infrastructure).** SUNBURST's behaviour was controlled
-by the IP range returned to its DNS queries — several of these are private or reserved ranges and
+by the IP range returned to its DNS queries. Several of these are private or reserved ranges and
 **must not be blocked**. The full table is in [`solarwinds-ttps.md`](solarwinds-ttps.md), section
-"Command and control, stage 1 — DNS".
+"Command and control, stage 1: DNS".
 
 ## 5. Detection content (public rule sets)
 
 Ready-made detection rules are published and can be cited in the mitigation task rather than reproduced
 here:
 
-- **Mandiant `sunburst_countermeasures`** — YARA, Snort, and OpenIOC rules for SUNBURST, TEARDROP, and
+- **Mandiant `sunburst_countermeasures`:** YARA, Snort, and OpenIOC rules for SUNBURST, TEARDROP, and
   Cobalt Strike, plus indicator lists and the full set of hashed process/service names SUNBURST checks.
-- **CISA AA20-352A** — indicator list and the `Sparrow.ps1` tool for detecting compromised Microsoft 365
-  accounts; Emergency Directive 21-01.
-- **Microsoft** — Defender antivirus detections (`Trojan:MSIL/Solorigate.*`) and advanced-hunting /
+- **CISA AA20-352A:** indicator list and the `Sparrow.ps1` tool for detecting compromised Microsoft 365
+  accounts, and Emergency Directive 21-01.
+- **Microsoft:** Defender antivirus detections (`Trojan:MSIL/Solorigate.*`) and advanced-hunting /
   Sentinel queries for the SUNBURST DNS pattern, suspicious SolarWinds child processes, and the TEARDROP
   loader.
-- **Sigma** — community rules for the UNC2452 process, PowerShell, and VBScript patterns.
+- **Sigma:** community rules for the UNC2452 process, PowerShell, and VBScript patterns.
 
 ## 6. Recent APT29 indicators (2023–2024)
 

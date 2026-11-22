@@ -1,22 +1,22 @@
-# SolarWinds / SUNBURST — detailed technique reference
+# SolarWinds / SUNBURST: detailed technique reference
 
 This is the technical companion to the walkthrough in [`README.md`](README.md): the same attack, in
 more depth, grouped by Cyber Kill Chain phase, with MITRE ATT&CK techniques named inline. It covers
 the SolarWinds Compromise campaign (ATT&CK **C0024**, August 2019 – January 2021).
 
-The primary source is the report the professor assigned — Mandiant, *SUNBURST Additional Technical
-Details* (24 December 2020), referred to below as **Mandiant ATD** — supported by the other vendor and
-government reports. Full citations for every source named here are in [`sources.md`](sources.md).
+The primary source is the report the professor assigned: Mandiant, *SUNBURST Additional Technical
+Details* (24 December 2020), referred to below as **Mandiant ATD**. The other vendor and government
+reports support it. Full citations for every source named here are in [`sources.md`](sources.md).
 Domain names are written with `[.]` so they cannot be clicked by accident.
 
 A note on the kill chain: the Lockheed Martin model was designed for direct intrusions. In a
 supply-chain attack, weaponization and delivery happen at the third party (SolarWinds), and
-"exploitation" means the victim's own trusted software loads the code — **no software vulnerability is
+"exploitation" means the victim's own trusted software loads the code. **No software vulnerability is
 exploited**.
 
 ---
 
-## Weaponization — tampering with the build (SUNSPOT)
+## Weaponization: tampering with the build (SUNSPOT)
 
 The attackers did not modify Orion's source repository. Instead they placed an implant, **SUNSPOT**
 (on disk as `taskhostsvc.exe`, persisted by a scheduled task at boot), on the build server. SUNSPOT
@@ -39,7 +39,7 @@ Trojanized updates were signed between March and May 2020.
 
 ---
 
-## Exploitation — how the backdoor starts
+## Exploitation: how the backdoor starts
 
 When the Orion "Inventory Manager" plug-in loads, a routine method calls the backdoor class. Before
 doing anything, SUNBURST confirms its own process name hashes to the expected value for
@@ -56,7 +56,7 @@ privileges.
 
 ---
 
-## Installation — dormancy and environment checks
+## Installation: dormancy and environment checks
 
 Before contacting anyone, SUNBURST confirmed it was on a genuine, interesting target:
 
@@ -83,7 +83,7 @@ Discovery (`T1518.001`), System Service Discovery (`T1007`), Impair Defenses: Di
 
 ---
 
-## Command and control, stage 1 — DNS
+## Command and control, stage 1: DNS
 
 First contact used the Domain Name System. SUNBURST generated subdomain names under
 **`avsvmcloud[.]com`** with a domain generation algorithm and resolved them through the system's normal
@@ -102,7 +102,7 @@ The **IP address range** returned in the answer told the backdoor what to do:
 | 41.84.159.0/24, 74.114.24.0/21, 154.118.140.0/24, 217.163.7.0/24 | Return an active sample to the quiet, passive state. |
 
 Because the kill-switch set includes private and reserved ranges, a sandbox or sinkhole that answers
-with a private address switches the malware off. This is exactly how the attack was contained: in
+with a private address switches the malware off. That is how the attack was contained: in
 December 2020 the `avsvmcloud[.]com` domain was redirected to a sinkhole whose address falls in a
 kill-switch range. An encrypted web channel could only be reached through an alias (CNAME) record, not
 a raw address.
@@ -113,15 +113,15 @@ Algorithm" and "DNS C2 and the C2 Coordinator Protocol".*
 
 ---
 
-## Command and control, stage 2 — HTTPS
+## Command and control, stage 2: HTTPS
 
 Once an alias record pointed to a real control server, SUNBURST opened an encrypted web channel
 (handled by its `HttpHelper` component) and ran the commands it received, waiting at least a minute
 between requests. Outgoing data was wrapped in a format that imitates Orion's own "Improvement Program"
-telemetry. Replies looked like harmless program data but the commands were concealed inside
-identifier- and hex-like strings — a use of **steganography** — then XOR-decoded and decompressed. The
-control servers used host names that matched real names inside the victim's network and were usually
-hosted in the victim's own country.
+telemetry. Replies looked like harmless program data, but the commands were concealed inside
+identifier- and hex-like strings, a form of **steganography**, and were then XOR-decoded and
+decompressed. The control servers used host names that matched real names inside the victim's network
+and were usually hosted in the victim's own country.
 
 SUNBURST understood a small, generic command set ("Jobs"):
 
@@ -150,7 +150,7 @@ stage, not to carry out the operation itself.
 
 ---
 
-## Second stage — TEARDROP, Raindrop and Cobalt Strike
+## Second stage: TEARDROP, Raindrop and Cobalt Strike
 
 On selected victims, and through the web channel above, SUNBURST delivered a loader to launch
 **Cobalt Strike** (a commercial intrusion-testing tool whose agent is called Beacon, widely abused by
@@ -165,7 +165,7 @@ attackers):
 
 The connection between SUNBURST and Cobalt Strike was deliberately broken: a registry "Image File
 Execution Options" entry caused a script to run the next time a routine Windows program started, which
-launched the loader and then deleted the entry — so finding Cobalt Strike did not lead investigators
+launched the loader and then deleted the entry, so finding Cobalt Strike did not lead investigators
 back to the SolarWinds process.
 
 *Techniques:* Ingress Tool Transfer (`T1105`), Image File Execution Options Injection (`T1546.012`),
@@ -175,18 +175,18 @@ report; Microsoft, "Deep dive into the Solorigate second-stage activation"; Syma
 
 ---
 
-## Actions on objectives — inside the network
+## Actions on objectives: inside the network
 
 Human operators then worked by hand, aiming to look like ordinary administrators.
 
-- **Reconnaissance.** They used the **AdFind** utility (renamed to blend in — Volexity saw it as
+- **Reconnaissance.** They used the **AdFind** utility (renamed to blend in: Volexity saw it as
   `sqlceip.exe`, posing as SQL Server telemetry) to list domains, computers, and accounts, and
   specific commands to map Exchange.
 - **Credential theft.** They requested service tickets to crack offline (Kerberoasting), attempted to
   read group-managed service-account passwords, and used privileged accounts to replicate password
   data from domain controllers (DCSync).
 - **Lateral movement.** They used a **different stolen credential for each step** ("credential
-  hopping") — never the one used for remote access — moving over Remote Desktop, Windows Management
+  hopping"), never the one used for remote access, and moved over Remote Desktop, Windows Management
   Instrumentation, and PowerShell remoting.
 - **Anti-forensics.** They stopped audit logging, added firewall rules to limit some outbound traffic
   during reconnaissance, disabled security services on remote machines, and altered file timestamps to
@@ -200,7 +200,7 @@ Kerberoasting (`T1558.003`), DCSync (`T1003.006`), Valid Accounts (`T1078`), Rem
 
 ---
 
-## Actions on objectives — the pivot to the cloud
+## Actions on objectives: the pivot to the cloud
 
 The objective was email, much of it in Microsoft 365, so the attackers moved from the on-premises
 network into the cloud.
@@ -240,9 +240,9 @@ Protocol (`T1048.002`), Clear Mailbox Data (`T1070.008`). *Sources: Microsoft 36
   persists through Windows Management Instrumentation event subscriptions and disguises its control
   traffic as Google Notifications, plus a Linux version of GoldMax. *Source: CrowdStrike,
   "StellarParticle".*
-- **Alternative initial access.** For some victims, CISA notes entry routes other than the Orion update
-  — password guessing or spraying and weakly secured administrator credentials on external remote-access
-  services. A useful reminder that detection should not stop at Orion servers. *Source: CISA AA20-352A.*
+- **Alternative initial access.** For some victims, CISA notes entry routes other than the Orion update:
+  password guessing or spraying, and weakly secured administrator credentials on external remote-access
+  services. Detection should therefore not stop at Orion servers. *Source: CISA AA20-352A.*
 
 ---
 

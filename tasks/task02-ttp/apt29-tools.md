@@ -1,4 +1,4 @@
-# APT29 — malware and tool catalogue
+# APT29: malware and tool catalogue
 
 A reference for the group's wider toolset, beyond the SolarWinds attack itself. It supports the
 "favorite tools and techniques" part of the task and shows how consistent APT29's methods are across
@@ -34,20 +34,20 @@ section 4. Full citations are in [`sources.md`](sources.md).
 | BoomBox | S0635 | malware | 2021 | Downloader + reconnaissance | Dropbox |
 | NativeZone | S0637 | malware | 2021 | Cobalt Strike loader | loads Beacon |
 | VaporRage (BOOMMIC) | S0636 | malware | 2021–2022 | Shellcode downloader | HTTP from compromised websites |
-| BEATDROP | — | malware | 2022 | Downloader | Trello |
+| BEATDROP | n/a | malware | 2022 | Downloader | Trello |
 | FoggyWeb | S0661 | malware | 2021 | Passive federation-server backdoor | HTTP on federation-service paths |
-| MagicWeb | — | malware | 2022 | Federation-server authentication bypass | none (passive) |
+| MagicWeb | n/a | malware | 2022 | Federation-server authentication bypass | none (passive) |
 | QUIETEXIT | S1084 | malware | 2022 | Backdoor on network appliances | Reverse SSH; control on hacked cameras |
 | reGeorg | S1187 | malware | 2022 | Web shell / proxy (backup access) | HTTP tunnel |
-| SNOWYAMBER | — | malware | 2022 | Downloader, target triage | Notion |
-| HALFRIG | — | malware | 2023 | Loader with embedded Cobalt Strike | Beacon |
-| QUARTERRIG (MUSKYBEAT) | — | malware | 2023 | Downloader / in-memory dropper | Cobalt Strike / Brute Ratel |
-| SPICYBEAT, ICEBEAT, BURNTBATTER, STATICNOISE | — | malware | 2023 | Downloaders / loaders | OneDrive / Dropbox; Zulip (ICEBEAT) |
-| GraphicalProton | — | malware | 2023 | Backdoor | OneDrive (primary), Dropbox (backup) |
-| WINELOADER | — | malware | 2024 | Modular backdoor | HTTP to attacker domains |
-| GRAPELOADER | — | malware | 2025 | First-stage loader | HTTPS polling |
+| SNOWYAMBER | n/a | malware | 2022 | Downloader, target triage | Notion |
+| HALFRIG | n/a | malware | 2023 | Loader with embedded Cobalt Strike | Beacon |
+| QUARTERRIG (MUSKYBEAT) | n/a | malware | 2023 | Downloader / in-memory dropper | Cobalt Strike / Brute Ratel |
+| SPICYBEAT, ICEBEAT, BURNTBATTER, STATICNOISE | n/a | malware | 2023 | Downloaders / loaders | OneDrive / Dropbox; Zulip (ICEBEAT) |
+| GraphicalProton | n/a | malware | 2023 | Backdoor | OneDrive (primary), Dropbox (backup) |
+| WINELOADER | n/a | malware | 2024 | Modular backdoor | HTTP to attacker domains |
+| GRAPELOADER | n/a | malware | 2025 | First-stage loader | HTTPS polling |
 | AADInternals, ROADTools | S0677 / S0684 | tool | 2021 onward | Cloud-directory enumeration and abuse | cloud interfaces |
-| Mimikatz, Rubeus, EDRSandBlast, SharpChromium | S0002 and others | tool | 2023 | Credential theft, disabling endpoint defences | — |
+| Mimikatz, Rubeus, EDRSandBlast, SharpChromium | S0002 and others | tool | 2023 | Credential theft, disabling endpoint defences | none |
 
 ---
 
@@ -55,14 +55,14 @@ section 4. Full citations are in [`sources.md`](sources.md).
 
 **The Duke family (2008–2015).** APT29's earliest toolset ran several malware families in parallel. A
 recurring trait even then was the use of legitimate web services to receive or back up the control
-address — MiniDuke, CozyDuke, and OnionDuke used Twitter, and CloudDuke used Microsoft OneDrive.
+address. MiniDuke, CozyDuke, and OnionDuke used Twitter, and CloudDuke used Microsoft OneDrive.
 **HAMMERTOSS** (2015) is the clearest example: it generated a new Twitter handle each day, read a tweet
 that pointed to an image hosted on a site such as GitHub, and extracted commands hidden after the end
-of the image file — an early use of image steganography.
+of the image file, an early use of image steganography.
 
 **Operation Ghost (2013–2019).** A long-running, staged campaign against foreign ministries. First-stage
 tools (**PolyglotDuke**, **RegDuke**) read their control address from posts on public sites, encoded in
-unusual character sets; RegDuke additionally hid data in the pixels of images and persisted through a
+unusual character sets. RegDuke also hid data in the pixels of images and persisted through a
 background process that triggered when Microsoft Word opened. Later stages (**MiniDuke**, **FatDuke**)
 provided full backdoor access.
 
@@ -75,8 +75,8 @@ the open-source **Sliver** framework to keep access.
 large phishing operation using a consistent chain: **EnvyScout** (an HTML-smuggling dropper) delivered a
 disk image containing a shortcut and a library, which loaded **BoomBox**, **NativeZone**, or
 **VaporRage**, ending in Cobalt Strike. It also developed backdoors that live inside an organisation's
-federation server — **FoggyWeb** (steals the token-signing certificates) and **MagicWeb** (lets the
-attacker sign in as any user) — which directly enable the Golden SAML technique seen in the SolarWinds
+federation server, **FoggyWeb** (steals the token-signing certificates) and **MagicWeb** (lets the
+attacker sign in as any user), which directly enable the Golden SAML technique seen in the SolarWinds
 attack.
 
 **Diplomatic phishing (2022–2025).** A steady series of campaigns against embassies and ministries,
@@ -84,8 +84,8 @@ with new downloaders each year (**BEATDROP** via Trello, **SNOWYAMBER** via Noti
 via OneDrive, **WINELOADER** and **GRAPELOADER** via compromised websites). The method is remarkably
 stable: a smuggled image or archive, a legitimate signed program that side-loads a malicious library,
 and a commercial tool (Cobalt Strike or Brute Ratel) for control. The 2024 WINELOADER campaign used a
-dinner-invitation lure; the 2025 GRAPELOADER campaign used a wine-tasting lure — both delivered through
-the same technique.
+dinner-invitation lure. The 2025 GRAPELOADER campaign used a wine-tasting lure. Both were delivered
+through the same technique.
 
 ## Notes on cloud and identity (2021 onward)
 
@@ -97,7 +97,7 @@ registering the attacker's own device for multi-factor authentication; and socia
 Microsoft Teams. In the 2023–2024 breach of Microsoft's own corporate systems, the entry point was a
 password spray against a legacy test account without multi-factor authentication, followed by abuse of
 cloud applications to read corporate mailboxes. In October 2024 the group sent signed remote-desktop
-configuration files to thousands of targets, which — when opened — connected the victim's computer to
+configuration files to thousands of targets. When opened, these connected the victim's computer to
 an attacker-controlled server.
 
 *Full citations, with the exact section used for each claim, are in [`sources.md`](sources.md).*
