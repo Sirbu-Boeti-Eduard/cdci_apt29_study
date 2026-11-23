@@ -1,251 +1,110 @@
-# Task 07 -- Mitigation and Countermeasures
+# Task 7: Mitigation and Countermeasures
 
-## 1. Introduction
-
-The SUNBURST/SolarWinds incident demonstrated that even a trusted,
-digitally-signed software update can carry a hidden backdoor if the
-build process producing it is compromised rather than the source code
-itself. This represents a distinct category of risk --- a software
-supply-chain attack --- where the trust customers place in a vendor's
-update mechanism becomes the attack's delivery method, rather than
-something attackers need to separately break through.
-
-Countermeasures against this kind of attack matter for a reason that
-goes beyond this single incident: nearly every organization relies on
-third-party software updates it cannot independently audit, which means
-prevention, detection, and recovery strategies have to assume a trusted
-vendor could, at some point, unknowingly ship something malicious. This
-section evaluates the countermeasures relevant to each stage of the
-SUNBURST attack --- from the initial build-pipeline compromise through
-to post-compromise detection and recovery --- along with a realistic
-assessment of how difficult each is to actually deploy.
-
-## 2. Root Cause Analysis (What Went Wrong)
-
-The attackers gained access to SolarWinds' internal environment,
-specifically to the Orion build pipeline --- the automated system that
-compiles source code into the final software before distribution. Rather
-than permanently modifying the source code repository, the attackers
-used a tool called SUNSPOT to temporarily replace a source file
-(`InventoryManager.cs`) with a malicious version during the build
-process. This allowed them to inject the SUNBURST backdoor into the
-compiled Orion component, after which they restored the original file,
-leaving no trace in the source repository itself.
-
-The resulting component was then digitally signed through SolarWinds'
-legitimate signing process and distributed as a normal software update.
-The core lesson here is important: a valid digital signature proves that
-an artifact was signed by the expected signing authority --- it does not
-prove that the build process which produced that artifact was
-uncompromised. No mechanism verified that what entered the build matched
-what was supposed to be there, and that gap *before* signing is what
-allowed a compromised artifact to be trusted by every customer who
-installed the update.
-
-## 3. Preventive Countermeasures
-
-### 3.1 Secure Build Pipeline Integrity
-
-Isolate and harden the build environment --- restrict network access
-from build servers, use ephemeral/disposable build agents, and enforce
-strict access controls so a compromised credential can't silently alter
-build inputs. This directly targets the SUNSPOT mechanism, since build
-tampering only works if the build environment is reachable and
-persistent enough to modify.
-
-### 3.2 Code Signing & Artifact Verification
-
-A compromised build can still produce a correctly-signed malicious
-artifact --- so signing-key protection alone does not guarantee
-trustworthy software. Three complementary controls are needed together:
-
--   **Protect code-signing keys** using hardware security modules (HSMs)
-    and restricted access, so the signing step itself can't be bypassed
-    or stolen.
--   **Verify build artifacts independently** before release, rather than
-    trusting the build pipeline's own output blindly.
--   **Use reproducible builds where feasible** --- independently
-    rebuilding the same source and comparing the output hash to what was
-    signed and shipped, to catch a mismatch even when the signature
-    itself is valid.
-
-### 3.3 Software Supply Chain Risk Management & Best Practices
-
-SBOM (Software Bill of Materials) requirements and vendor security
-assessments for critical infrastructure software suppliers, combined
-with least-privilege access and MFA across the organization to limit
-what a compromised credential can reach. A zero-trust posture internally
---- assuming a trusted vendor update could be hostile rather than
-granting it blanket network access by default --- is the broader
-best-practice takeaway for any organization consuming third-party
-software. None of this stops this specific attack alone, but it reduces
-blast radius and gives downstream customers visibility they didn't have
-before.
-
-## 4. Detection Countermeasures
-
-### 4.1 DNS Monitoring & Anomaly Detection
-
-SUNBURST used a Domain Generation Algorithm (DGA) to create subdomains
-and communicated with an intermediary C2 coordinator through DNS A and
-CNAME records --- but this applied to its early-stage victim triage, not
-all of its activity; the later, active-stage command-and-control also
-used HTTP(S), not DNS alone. Detection should therefore include:
-
--   Monitoring for unusual, algorithmically-generated DNS subdomains.
--   Flagging unexpected DNS queries from servers that normally have
-    limited external communication.
--   Monitoring for unusual DNS A and CNAME responses tied to those
-    queries.
--   Investigating periodic or delayed beaconing patterns (SUNBURST
-    waited roughly 12--14 days before its first check-in).
-
-### 4.2 Network Traffic / Behavioral Analysis
-
-Deep packet inspection and traffic baselining, rather than signature
-matching --- looking for fields in "legitimate-looking" telemetry (like
-Orion's own OIP messages) that deviate from the expected schema or
-encoding. The active-stage C2 traffic was deliberately disguised as
-normal product telemetry over HTTP(S), which is a core reason this
-attack evaded signature-based detection for so long.
-
-### 4.3 Endpoint Detection and Response (EDR)
-
-It's important to distinguish two different detection problems here:
-
--   **Detecting the original SUNBURST backdoor** --- this is hard, since
-    it was a signed, trusted component behaving mostly passively; EDR
-    alone offers limited help at this stage.
--   **Detecting subsequent attacker activity** --- once active, EDR can
-    help flag process injection, credential access, persistence
-    mechanisms, and known C2 framework behavior (e.g. Cobalt Strike
-    BEACON patterns), which is relevant to the TEARDROP/BEACON follow-on
-    activity.
-
-EDR is a meaningful layer, but it cannot guarantee detection of a
-sophisticated supply-chain compromise on its own --- it's one control
-among several, not a silver bullet.
-
-## 5. Mitigation & Verification (If Infected)
-
-CISA's actual documented response to SUNBURST involved several concrete
-steps, which this section mirrors:
-
--   Immediately isolate/disconnect affected Orion systems from the
-    network.
--   Investigate for indicators of compromise, including identifying any
-    malicious accounts and persistence mechanisms the attackers may have
-    created.
--   Treat "received the update" and "was actively compromised" as two
-    different things to verify separately --- exposure alone doesn't
-    confirm follow-on activity, so verification means checking for
-    actual signs of compromise, not just patch version.
--   Carefully rebuild affected systems from trusted installation media
-    or verified clean images after investigating and containing the
-    compromise, rather than simply patching in place, since persistence
-    mechanisms may remain otherwise.
--   Rotate credentials broadly and deliberately --- this needs to
-    account for the organization's entire identity infrastructure and
-    privileged accounts, not just changing one password, since lateral
-    movement here relied on compromised credentials across multiple
-    systems.
-
-### 5.1 Mapping Countermeasures to the Group's PoC
-
-The group's Task 5 proof of concept simulates a software supply-chain compromise using Mininet and Docker. A supplier pipeline publishes a tampered V3 update, which the client downloads and accepts after verifying its SHA-256 digest and RSA signature. The client then performs a simulated DNS check-in, follows a CNAME handoff, establishes HTTP communication with an operator, and executes commands in the isolated lab environment.
-
-The following table connects the simulated attack stages to the countermeasures proposed in this task.
-
-| PoC stage | Relevant countermeasure | Expected security benefit |
-|---|---|---|
-| Tampered V3 artifact enters the release pipeline | Build pipeline isolation and strict access controls | Reduce opportunities for unauthorized changes to release artifacts. |
-| Pipeline signs and publishes the tampered update | Independent artifact verification and reproducible builds | Help detect discrepancies between approved build inputs and released artifacts. |
-| Client accepts the signed update | Least privilege and restricted update permissions | Limit the consequences of installing compromised software. |
-| Client performs a DNS check-in and CNAME handoff | DNS logging and anomaly detection | Help identify unexpected DNS activity associated with command-and-control communication. |
-| Client establishes an HTTP connection with the operator | Network traffic monitoring and segmentation | Detect suspicious outbound connections and restrict communication with unauthorized destinations. |
-| Operator sends commands to the client | Endpoint Detection and Response (EDR) | Help identify suspicious process execution and investigate post-compromise activity. |
-
-**PoC limitations:** This demonstration is a controlled simulation, not a complete recreation of SUNBURST. The client installs a manifest-based update and activates a predefined check-in routine. It does not execute arbitrary code uploaded in the update package, reproduce SUNSPOT's source-file replacement mechanism, or implement the original SUNBURST DGA. The demonstration also does not recreate TEARDROP or Cobalt Strike.
-
-**Evaluation:** The PoC illustrates why code signing alone cannot guarantee software integrity and how monitoring and access controls could reduce the impact of a compromised update. However, these countermeasures are proposed defenses; their effectiveness has not been experimentally validated in the group's PoC.
-
-**Reference:** Group 2, Task 5, `tasks/task05-poc/playbook.md` (PoC design and demonstration instructions).
-
-## 6. Evaluation of Countermeasures
-
-A deployment-difficulty rating is only useful if it's justified rather
-than asserted. For each countermeasure below, the "why" matters as much
-as the rating itself.
-
-| Countermeasure | Effectiveness | Deployment difficulty | Why |
-|---|---|---|---|
-| Build pipeline isolation | High | High | Requires reworking existing build infrastructure, access controls, and potentially changing established developer workflows. |
-| Reproducible builds | High | Very High | Requires consistent build environments, pinned dependencies, deterministic timestamps, and toolchain discipline across the organization — a significant engineering maturity requirement. |
-| Independent artifact verification | High | High | Requires a separate verification process, trusted build records, and additional checks before software releases can be approved. |
-| HSM-protected signing keys | High | Medium | Mostly a procurement and process change rather than a full redesign, but requires integrating HSMs into existing release pipelines. |
-| DNS anomaly detection | High for this attack specifically | Medium | Needs tuning to reduce false positives and assumes the organization already has DNS visibility and logging in place. |
-| Behavioral network/traffic analysis | High | Medium–High | Needs a baselining period to learn normal traffic before anomalies are meaningful, as well as investment in monitoring tools. |
-| Endpoint Detection and Response (EDR) | Medium–High | Low–Medium | Mostly a matter of product adoption and configuration; it does not require redesigning the infrastructure. |
-| MFA and least privilege | Medium — limits lateral movement but does not prevent the initial compromise | Low | Widely supported by identity providers; deployment mainly requires an organization-wide rollout and access-policy changes. |
-| SBOM and vendor risk management | Low–Medium in the short term; High in the long term | Medium | Requires organizational and contractual work, such as vendor requirements and review processes, with sustained process ownership. |
-
-## 7. Conclusion
-
-SUNBURST shows that supply-chain compromises don't fail because any
-single control was missing --- they succeed because trust was placed in
-a process (the build pipeline) that wasn't independently verified before
-that trust was extended further downstream through a valid signature. No
-single countermeasure in this document would have fully prevented the
-incident on its own; prevention, detection, and response need to be
-layered, because a sufficiently sophisticated attacker can defeat any
-one control in isolation. The clearest actionable takeaway is that
-"trusted" and "verified" are not the same thing, and closing that gap
---- through build integrity, independent verification, and
-behavior-based detection rather than signature-based trust --- is the
-throughline connecting every recommendation above.
-
-## 8. References
-
-SUNSPOT replaced the Orion source file `InventoryManager.cs` during the
-build process to inject the SUNBURST backdoor, then restored the
-original file.
-
--   [CrowdStrike, "SUNSPOT: An Implant in the Build
-    Process"](https://www.crowdstrike.com/en-us/blog/sunspot-malware-technical-analysis/),
-    January 11, 2021.
-
-SUNBURST generated DGA-based DNS subdomains for victim triage and used
-DNS A/CNAME records to select a command-and-control server; later
-active-stage communication occurred over HTTP(S).
-
--   [Google Cloud / Mandiant, "SUNBURST Additional Technical
-    Details"](https://cloud.google.com/blog/topics/threat-intelligence/sunburst-additional-technical-details),
-    January 2021.
-
-CISA issued a national cybersecurity advisory detailing the scope of the
-compromise and recommended mitigations for affected government and
-private-sector organizations.
-
--   [CISA, Alert AA20-352A, "Advanced Persistent Threat Compromise of
-    Government Agencies, Critical Infrastructure, and Private Sector
-    Organizations"](https://www.cisa.gov/uscert/ncas/alerts/aa20-352a),
-    December 17, 2020 (updated April 15, 2021).
-
-CISA published detailed eviction guidance for organizations needing to
-remove the threat actor from affected networks, structured around
-pre-eviction, eviction, and post-eviction phases.
-
--   [CISA, AR21-134A, "Eviction Guidance for Networks Affected by the
-    SolarWinds and Active Directory/M365
-    Compromise"](https://us-cert.cisa.gov/ncas/analysis-reports/ar21-134a),
-    May 14, 2021.
-
-CISA issued an Emergency Directive ordering federal civilian agencies to
-disconnect affected SolarWinds Orion versions immediately upon discovery
-of the compromise.
-
--   [CISA, Emergency Directive 21-01, "Mitigate SolarWinds Orion Code
-    Compromise"](https://cisa.gov/emergency-directive-21-01), December
-    13, 2020.
-
+**Project:** APT29 and the SolarWinds SUNBURST supply-chain compromise
 **Written by:** Emna Guesmi
+
+## 1. What the attack exposed
+
+SUNBURST reached customers inside a signed Orion update. The attackers did not change Orion's source repository. They placed SUNSPOT on a build server, where it watched for `MsBuild.exe`, confirmed that the build was Orion's, replaced `InventoryManager.cs` with a backdoored copy, and restored the original after compilation (CrowdStrike, "Orion Source Code Replacement"). SolarWinds then signed the resulting component and published it through its normal update channel (FireEye/Mandiant, "SUNBURST Backdoor").
+
+A signature identifies the key that signed an artifact. It does not show what happened to the code before signing. CISA describes code signing as evidence of the author's identity and of the code's integrity at the time of signing, and notes that attackers can undermine the signing process itself (CISA, *Defending Against Software Supply Chain Attacks*, p. 3). The public accounts cited here do not describe a control that caught the substitution before release, so a valid signature made a tampered build look trustworthy to the customers who installed it.
+
+The countermeasures below are grouped by where they act. Sources are named where a control comes from CISA or a vendor report. Where a control is the team's proposal, the text says so.
+
+## 2. Prevention
+
+### 2.1 Harden the build environment
+
+SUNSPOT needed a build server it could reach, modify, and keep running. Separating build infrastructure from office and developer networks, restricting outbound traffic, using short-lived build agents, and limiting who can change build jobs all reduce that opportunity. CISA recommends protecting code from unauthorized access and using properly configured compilation and build processes (CISA, *Defending Against Software Supply Chain Attacks*, p. 12). Network isolation and disposable agents are the team's extension of that advice for this incident.
+
+### 2.2 Protect signing keys and verify the artifact
+
+Signing-key protection matters, but it would not have stopped SUNBURST, because the attackers used SolarWinds' own signing process. Three controls cover different gaps:
+
+- Keep signing keys in a hardware security module (HSM) and restrict who can use them (team recommendation). CISA recommends protecting the code-signing certificate (CISA, *Defending Against Software Supply Chain Attacks*, p. 12). This limits key theft and misuse but does not detect a tampered build.
+- Compare the released artifact with an independently produced reference before release (team recommendation). This is the control aimed directly at the substitution.
+- Rebuild from source in a controlled environment and compare hashes where the toolchain allows it (team recommendation). A reproducible malicious build is still malicious: a match shows that the build matched its inputs, not that the inputs were safe.
+
+### 2.3 Reduce supplier and identity risk
+
+Software bills of materials (SBOMs), vendor assessments, least privilege, multi-factor authentication (MFA), and a zero-trust posture toward vendor software limit what an attacker can do after a malicious update is installed. CISA recommends that customers request a software component inventory and consider supplier development practices, and that vendors publish an SBOM with each release (CISA, *Defending Against Software Supply Chain Attacks*, p. 7 and p. 13). The identity and network measures are the team's proposal. None of these prevent a build-pipeline compromise. They shorten the time to identify affected components and reduce the reach of stolen credentials.
+
+## 3. Detection
+
+### 3.1 DNS monitoring
+
+SUNBURST generated subdomain names under `avsvmcloud[.]com` with a domain generation algorithm (DGA) and encoded a machine identifier and the victim's internal domain in them. The IP range in the DNS answer told the implant whether to stay passive, become active, or disable itself, and a CNAME response supplied the server for later HTTP(S) command and control (Mandiant, "SUNBURST Additional Technical Details", "Domain Generation Algorithm" and "DNS C2 and the C2 Coordinator Protocol"). It waited 12 to 14 days before its first check-in (Mandiant, "Anti-Analysis Environment Checks").
+
+Useful detection points:
+
+- Unusually long or algorithmically generated subdomains.
+- DNS queries from servers that normally make few external requests.
+- A and CNAME answers that point to unexpected hosts or ranges.
+- Delayed or periodic check-ins that do not match normal software behavior.
+
+CISA's Orion guidance includes reviewing stored network traffic for new external DNS domains contacted by a small number of hosts (CISA AA20-352A, "SolarWinds Orion Specific Mitigations", Step 1). The group's PoC uses a fixed name and a simplified handoff, so a DGA classifier is not designed for its fixed-domain check-in. A detection rule for the PoC needs to be defined and measured against benign lab traffic.
+
+### 3.2 Network behavior
+
+Once active, SUNBURST disguised its traffic as Orion Improvement Program (OIP) messages over HTTP(S) (Mandiant, "HTTP(S) C2"). Signature matching does not separate that from product telemetry. A baseline of expected destinations, request cadence, and payload structure is more useful. CISA recommends that customers learn a product's expected external communication pattern and monitor for deviations (CISA, *Defending Against Software Supply Chain Attacks*, p. 14).
+
+### 3.3 Endpoint detection and response (EDR)
+
+EDR has little to work with while SUNBURST behaves as a signed, passive Orion component. It becomes useful after the operator acts. Mandiant reported TEARDROP delivering Cobalt Strike BEACON in at least one victim (FireEye/Mandiant, "TEARDROP and BEACON Malware Used"), and EDR can flag process injection, credential access, persistence, and known BEACON behavior. That visibility does not confirm a supply-chain compromise on its own.
+
+## 4. Response and recovery
+
+CISA's advice separated exposure from follow-on compromise. AA20-352A states that not every organization that received the backdoor was targeted with follow-on actions (CISA AA20-352A, "Key Takeaways"). For affected federal agencies, Emergency Directive 21-01 required disconnecting or powering down affected Orion versions (CISA ED 21-01, Required Action 2).
+
+AA20-352A set out three steps for networks using Orion:
+
+1. Image system memory and affected hosts, review accounts, and inspect stored traffic for new external DNS domains (Step 1).
+2. Disconnect or power down affected instances, block traffic to and from their hosts, and remove attacker-controlled accounts and persistence (Step 2).
+3. Rebuild monitored hosts from trusted sources and reset all credentials stored in or used by SolarWinds software (Step 3).
+
+Mandiant made a related recommendation: build new systems rather than upgrading an affected host in place, because an upgrade can overwrite forensic evidence and leave additional backdoors (FireEye/Mandiant, "Immediate Mitigation Recommendations"). CISA's later eviction guidance organized the work into pre-eviction, eviction, and post-eviction phases, including rebuilding and reimaging systems and resetting the `krbtgt` account twice (CISA AR21-134A, Phases 1-3 and "Eviction Phase").
+
+### 4.1 Mapping to the group's PoC
+
+The Task 5 PoC simulates a supplier pipeline that publishes a tampered V3 update. The client downloads it, verifies a SHA-256 digest and RSA signature, performs a DNS check-in, follows a CNAME handoff, and contacts an operator over HTTP. The table below connects those stages to the countermeasures above.
+
+| PoC stage | Countermeasure | Expected benefit |
+|---|---|---|
+| Tampered V3 enters the release pipeline | Build isolation and strict access control | Fewer opportunities to change release artifacts. |
+| Pipeline signs and publishes V3 | Independent artifact verification and reproducible builds | Detect a mismatch between approved inputs and the released artifact. |
+| Client accepts the signed update | Least privilege and restricted update permissions | Limit the rights and network reach available to the installed software. |
+| Client performs DNS check-in and CNAME handoff | DNS logging and anomaly detection | Show unexpected DNS activity associated with C2. |
+| Client contacts the operator over HTTP | Network monitoring and segmentation | Detect or block unexpected outbound connections. |
+| Operator sends commands | EDR | Record and investigate post-compromise activity. |
+
+The PoC is a simulation. It installs a manifest-based update, runs a predefined check-in routine, and does not execute arbitrary code from the update, reproduce SUNSPOT's file replacement, implement the original DGA, or recreate TEARDROP or Cobalt Strike. The countermeasures in this section have not been tested in the lab.
+
+## 5. Evaluation
+
+The ratings below are the team's assessment, not measured results. Difficulty refers to a typical enterprise deployment, not the PoC.
+
+| Countermeasure | Expected effectiveness | Deployment difficulty | Reasoning |
+|---|---|---|---|
+| Build pipeline isolation | High | High | Requires rebuilding build infrastructure, network controls, and developer workflows. |
+| Reproducible builds | High for detecting build tampering | Very high | Needs pinned dependencies, deterministic toolchains, controlled timestamps, and discipline across projects. |
+| Independent artifact verification | High | High | Needs a separate verification path, trusted build records, and a release gate. |
+| HSM-protected signing keys | Low for this attack, high against key theft | Medium | Procurement and process work. It protects the signing step, which SUNBURST did not need to break. |
+| DNS anomaly detection | High for post-installation visibility | Medium | Needs DNS logging and tuning. A fixed-domain PoC is not a DGA detection test. |
+| Network behavior analysis | Medium to high | Medium to high | Needs a baseline and monitoring tools. It can flag OIP-like traffic only after normal traffic is understood. |
+| EDR | Medium | Low to medium | Mostly product adoption and configuration. Limited against a signed passive backdoor. |
+| MFA and least privilege | Medium | Low | Limits lateral movement and credential reuse, but not the initial update. |
+| SBOM and vendor risk management | Low to medium now, higher over time | Medium | Needs contractual and review processes. It gives visibility rather than prevention. |
+
+## 6. Conclusion
+
+A valid signature answered the wrong question in this incident. It showed that SolarWinds had signed the artifact, not that the build that produced it was clean. The controls that would have helped most sit before signing, in build isolation and independent artifact verification, and they are also the hardest to deploy. Detection and recovery remain necessary because prevention can fail. The group's PoC can illustrate the gap, but it has not tested whether these controls would close it.
+
+## References
+
+- CrowdStrike Intelligence, "SUNSPOT: An Implant in the Build Process," 11 January 2021, "Orion Source Code Replacement." https://www.crowdstrike.com/en-us/blog/sunspot-malware-technical-analysis/
+- FireEye/Mandiant, "Highly Evasive Attacker Leverages SolarWinds Supply Chain to Compromise Multiple Global Victims With SUNBURST Backdoor," 13 December 2020, "SUNBURST Backdoor," "TEARDROP and BEACON Malware Used," and "Immediate Mitigation Recommendations." https://cloud.google.com/blog/topics/threat-intelligence/evasive-attacker-leverages-solarwinds-supply-chain-compromises-with-sunburst-backdoor
+- Mandiant, "SUNBURST Additional Technical Details," 24 December 2020, "Anti-Analysis Environment Checks," "Domain Generation Algorithm," "DNS C2 and the C2 Coordinator Protocol," and "HTTP(S) C2." https://cloud.google.com/blog/topics/threat-intelligence/sunburst-additional-technical-details
+- CISA, "Defending Against Software Supply Chain Attacks," April 2021, pp. 3, 7, 12, 13, and 14. https://www.cisa.gov/sites/default/files/publications/defending_against_software_supply_chain_attacks_508_1.pdf
+- CISA, AA20-352A, "Advanced Persistent Threat Compromise of Government Agencies, Critical Infrastructure, and Private Sector Organizations," 17 December 2020 (updated 15 April 2021), "Key Takeaways" and "SolarWinds Orion Specific Mitigations," Steps 1-3. https://www.cisa.gov/news-events/cybersecurity-advisories/aa20-352a
+- CISA, Emergency Directive 21-01, "Mitigate SolarWinds Orion Code Compromise," 13 December 2020, Required Action 2. https://www.cisa.gov/news-events/directives/emergency-directive-21-01
+- CISA, AR21-134A, "Eviction Guidance for Networks Affected by the SolarWinds and Active Directory/M365 Compromise," 14 May 2021, Phases 1-3 and "Eviction Phase." https://www.cisa.gov/news-events/analysis-reports/ar21-134a
