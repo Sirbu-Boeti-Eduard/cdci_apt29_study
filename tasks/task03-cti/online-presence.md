@@ -3,7 +3,7 @@ Written by: Teodor Maciuca
 ------------------
 Finding (source-reported): FireEye reported in 2015 that the APT29 backdoor HAMMERTOSS took its instructions from Twitter. The malware generated a new Twitter handle each day, and APT29 operators registered that day's handle only when they wanted to send a command. The tweet carried a URL and a hashtag. The URL pointed to a page, in FireEye's example on GitHub, holding an image with encrypted instructions appended to it. The hashtag gave the offset of the hidden data and part of the decryption key. FireEye also observed URLs leading to compromised websites, and stolen data was uploaded to cloud storage accounts that the operators created.
 
-Attribution: FireEye coined the name APT29 and assigned HAMMERTOSS to it; in 2015 it described the group only as suspected to be sponsored by the Russian government. MITRE ATT&CK lists HAMMERTOSS as APT29 software (S0037).
+Attribution: FireEye designated this group APT29 and assigned HAMMERTOSS to it; at the time it described the group only as suspected to be sponsored by the Russian government. MITRE ATT&CK lists HAMMERTOSS as APT29 software (S0037).
 
 See also: [task02 tool catalogue](../task02-ttp/apt29-tools.md), "Notes by era."
 
@@ -12,9 +12,9 @@ References:
 - [MITRE ATT&CK, "APT29" (G0016)](https://attack.mitre.org/groups/G0016/), "Software" table, HAMMERTOSS (S0037).
 
 ------------------
-Finding (source-reported): A 2021 U.S. advisory on SVR cyber operations states that infrastructure used in the intrusions is frequently obtained using false identities and cryptocurrencies. It adds that these identities are usually supported by low-reputation infrastructure such as temporary email accounts, that a number of SVR cyber personas use email services hosted on `cock[.]li` or related domains, and that VPS infrastructure is often procured from a network of VPS resellers.
+Finding (source-reported): A 2021 U.S. advisory on SVR cyber operations states that infrastructure used in the intrusions is frequently obtained using false identities and cryptocurrencies. It adds that these identities usually rely on low-reputation infrastructure such as temporary email accounts, and that a number of SVR cyber personas use email services hosted on `cock[.]li` or related domains. VPS infrastructure is often procured from a network of VPS resellers.
 
-Finding (team interpretation): We found no government or vendor report that names a specific cryptocurrency wallet or payment used by APT29. The advisory above confirms that the SVR pays for infrastructure with cryptocurrency but gives no addresses or amounts. For the grading item on crypto wallets, the honest answer is that public reporting describes the practice without exposing wallets.
+Finding (team interpretation): We found no government or vendor report that names a specific cryptocurrency wallet or payment used by APT29. The advisory above confirms that the SVR buys infrastructure using cryptocurrency, but it gives no addresses or amounts.
 
 Attribution: U.S. government. The advisory's summary identifies "SVR cyber actors" as also known as APT 29, the Dukes, CozyBear, and Yttrium.
 
@@ -27,12 +27,12 @@ Finding (source-reported): Microsoft reported that NOBELIUM (APT29) gained acces
 Attribution: Microsoft, under its name NOBELIUM. MITRE ATT&CK lists NOBELIUM as an associated name for APT29.
 
 References:
-- [Tom Burt, Microsoft, "Another Nobelium cyberattack"](https://blogs.microsoft.com/on-the-issues/2021/05/27/nobelium-cyberattack-nativezone-solarwinds/), 27 May 2021, second paragraph (access to USAID's Constant Contact account).
+- [Tom Burt, Microsoft, "Another Nobelium cyberattack"](https://blogs.microsoft.com/on-the-issues/2021/05/27/nobelium-cyberattack-nativezone-solarwinds/), 27 May 2021, the paragraph beginning "Nobelium launched this week's attacks" (access to USAID's Constant Contact account).
 - [Microsoft Threat Intelligence Center, "New sophisticated email-based attack from NOBELIUM"](https://www.microsoft.com/security/blog/2021/05/27/new-sophisticated-email-based-attack-from-nobelium/), 27 May 2021, introduction, "Early testing and initial discovery," "Escalated targeting and delivery," and "Advanced hunting."
 - [MITRE ATT&CK, "APT29" (G0016)](https://attack.mitre.org/groups/G0016/), "Associated Groups."
 
 ------------------
-Finding (source-reported): Poland's Military Counterintelligence Service and CERT Polska reported a 2023 campaign in which emails impersonating embassies of European countries reached staff at diplomatic posts. The emails invited recipients to a meeting or to work together on documents. The link led to a compromised website running the ENVYSCOUT script, which used HTML smuggling to deliver ISO or IMG disk images. The report says the actor prefers vulnerable websites belonging to random entities for its infrastructure, and that the SNOWYAMBER tool abused the Notion service to communicate.
+Finding (source-reported): In April 2023, Poland's Military Counterintelligence Service and CERT Polska reported an ongoing espionage campaign in which emails impersonating embassies of European countries reached staff at diplomatic posts. The emails invited recipients to a meeting or to work together on documents. The link led to a compromised website running the ENVYSCOUT script, which used HTML smuggling to deliver ISO or IMG disk images. The report says the actor tends to use vulnerable websites belonging to unrelated organizations for infrastructure, and that the SNOWYAMBER tool used Notion to communicate.
 
 Attribution: Polish government. The headline attributes the campaign only to "Russian intelligence services"; the body links the activity to what Microsoft calls NOBELIUM and Mandiant calls APT29, and to the SolarWinds campaign.
 
@@ -40,7 +40,7 @@ References:
 - [Military Counterintelligence Service (SKW) and CERT Polska, "Espionage campaign linked to Russian intelligence services"](https://www.gov.pl/web/baza-wiedzy/espionage-campaign-linked-to-russian-intelligence-services), 13 April 2023, "The course of the observed campaigns" and "Tools used during the campaign."
 
 ------------------
-Finding (source-reported): Unit 42 reported that in mid-April 2023 a diplomat at the Polish Ministry of Foreign Affairs emailed a genuine flyer advertising a used BMW 5-series in Kyiv. Cloaked Ursa likely obtained the flyer and, on 4 May 2023, sent altered copies to diplomatic missions in Kyiv. The altered flyer offered "more high quality photos" through a shortened link that downloaded shortcut files disguised as images. Unit 42 counted at least 22 of over 80 foreign missions in Kyiv as targets. The payload's command and control used the Microsoft Graph and Dropbox APIs.
+Finding (source-reported): Unit 42 reported that in mid-April 2023 a diplomat at the Polish Ministry of Foreign Affairs emailed a genuine flyer advertising a used BMW 5-series in Kyiv. Cloaked Ursa likely obtained the flyer and, on 4 May 2023, sent altered copies to diplomatic missions in Kyiv. The altered flyer offered "more high quality photos" through a shortened link that downloaded shortcut files disguised as images. Unit 42 counted at least 22 of the more than 80 foreign missions in Kyiv as targets. The payload's command and control used the Microsoft Graph and Dropbox APIs.
 
 Attribution: Unit 42, under its name Cloaked Ursa, which it equates with APT29. The basis is similarity to known campaigns and targets, known techniques, and code overlap with other Cloaked Ursa malware. MITRE ATT&CK's list of associated names for APT29 does not include Cloaked Ursa, so this equivalence rests on Unit 42 alone.
 
@@ -59,7 +59,7 @@ References:
 - [MITRE ATT&CK, "APT29" (G0016)](https://attack.mitre.org/groups/G0016/), "Associated Groups."
 
 ------------------
-Finding (source-reported): Mandiant reported that from as early as 26 February 2024 APT29 sent German political parties phishing emails inviting recipients to a dinner reception on 1 March, bearing the logo of the Christian Democratic Union (CDU). The link pointed to a ZIP file with the ROOTSAW dropper on a compromised WordPress site under the actor's control. The same site later served the WINELOADER backdoor.
+Finding (source-reported): Mandiant reported that from as early as 26 February 2024 APT29 sent German political parties phishing emails inviting recipients to a dinner reception on 1 March, bearing the logo of the Christian Democratic Union (CDU). The link pointed to a ZIP file with the ROOTSAW dropper on a compromised WordPress site under the actor's control. The same server also delivered the second-stage WINELOADER payload.
 
 Attribution: Mandiant, which names APT29 directly. The post gives no formal confidence level.
 
@@ -81,9 +81,9 @@ References:
 ------------------
 Finding (source-reported): Check Point Research reported that from January 2025 an actor impersonated a European Ministry of Foreign Affairs in emails inviting diplomats to wine-tasting events and diplomatic dinners. The emails came from at least two domains, `bakenhof[.]com` and `silry[.]com`. The link downloaded `wine.zip`, which started the GRAPELOADER loader, but only under certain conditions such as time or location; otherwise it redirected to the ministry's real website.
 
-Attribution (uncertain): Check Point links the campaign to APT29 through its overlap with the 2024 WINELOADER campaigns and through code similarities, and gives no formal confidence level. This is the weakest attribution in this file.
+Attribution (uncertain): Check Point links the campaign to APT29 through its overlap with the 2024 WINELOADER campaigns and through code similarities, and gives no formal confidence level.
 
 References:
-- [Check Point Research, "Unmasking APT29: The Sophisticated Phishing Campaign Targeting European Diplomacy"](https://research.checkpoint.com/2025/apt29-phishing-campaign/), 15 April 2025, "Introduction," "Campaign Overview" (subsection "Phishing Emails"), and "Attribution."
+- [Check Point Research, "Renewed APT29 Phishing Campaign Against European Diplomats"](https://research.checkpoint.com/2025/apt29-phishing-campaign/), 15 April 2025, "Introduction," "Campaign Overview" (subsection "Phishing Emails"), and "Attribution."
 
 ------------------
