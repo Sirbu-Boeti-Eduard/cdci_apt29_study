@@ -86,8 +86,8 @@ td strong { color: #e8f3f8; }
 .phase-state { font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; text-transform: uppercase; letter-spacing: .08em; color: #5d7383; }
 .phase.done { border-color: #2f6b52; background: #0d1e18; }
 .phase.done .phase-state { color: var(--green); }
-.phase.active { border-color: #8a6a2f; background: #1e180d; box-shadow: 0 0 0 1px #f1bd6a22, 0 0 18px #f1bd6a14; }
-.phase.active .phase-state { color: var(--amber); }
+.phase.next { border-color: #8a6a2f; background: #1e180d; box-shadow: 0 0 0 1px #f1bd6a22, 0 0 18px #f1bd6a14; }
+.phase.next .phase-state { color: var(--amber); }
 .phase.pending { opacity: .55; }
 .phase-arrow { align-self: center; color: #2c4354; font: 16px ui-monospace, SFMono-Regular, Menlo, monospace; }
 .chain-hint { margin: 10px 0 0; color: var(--muted); font-size: 10px; }

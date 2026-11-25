@@ -214,10 +214,8 @@ tr.empty td {
   .controls { margin-left: 0; }
   .message { display: none; }
 }
-.guide { padding: 10px 14px; }
-.guide summary { cursor: pointer; color: var(--cyan); font: 700 10px var(--mono); letter-spacing: .12em; text-transform: uppercase; }
-.guide-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px 20px; margin-top: 10px; }
-.guide-grid p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
-.guide-grid strong { color: var(--text); font-family: var(--mono); font-weight: 600; }
-.guide-grid code { color: var(--cyan); font: 10px var(--mono); }
-.guide em { color: var(--text); font-style: normal; }
+.role { display: inline-block; padding: 1px 5px; border: 1px solid var(--line); color: var(--muted); font: 9px var(--mono); text-transform: uppercase; letter-spacing: .08em; }
+.role.component { color: var(--cyan); border-color: #2f6f8c; }
+.role.launcher { color: var(--red); border-color: #5c2f2f; }
+.role.child { color: var(--text); }
+.cmd { white-space: normal; overflow-wrap: anywhere; color: var(--muted); font: 10px var(--mono); }

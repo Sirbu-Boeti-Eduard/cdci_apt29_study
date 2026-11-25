@@ -50,18 +50,6 @@
   </div>
 
   <main>
-    <details class="panel guide" open>
-      <summary>How to read this</summary>
-      <div class="guide-grid">
-        <p><strong>events</strong> — one row per rule match, computed from the pcap. The first <code>T5-C2-001</code> is the updater poll and is benign; it shows the rule working.</p>
-        <p><strong>decoded check-ins</strong> — the machine-built DNS labels, decoded: host, user, uid, mode (4 passive, 5 active, 3 disabled) and CRC.</p>
-        <p><strong>beacon intervals</strong> — spacing between check-ins. A low spread and cv with a periodic row means the beacon rule fired.</p>
-        <p><strong>flows</strong> — conversations, not verdicts. Port 8000 is the signed update download, 53 is DNS, 9000 is the telemetry upload.</p>
-        <p><strong>controls</strong> — <em>block</em> makes the coordinator answer NXDOMAIN (simulated resolver); <em>isolate</em> drops the victim's traffic at the tap with a real <code>tc</code> filter.</p>
-        <p><strong>what is missing</strong> — the tap sees packets only. It cannot show which process started which child; that needs a host sensor.</p>
-      </div>
-    </details>
-
     <section class="panel">
       <div class="panel-head">
         <h2>events</h2>
@@ -84,6 +72,29 @@
             <tr><th>time</th><th>rule</th><th>src</th><th>sport</th><th>dst</th><th>dport</th><th>proto</th><th>bytes</th><th>detail</th></tr>
           </thead>
           <tbody id="alerts"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>host processes</h2>
+        <span class="count" id="host-count">0</span>
+      </div>
+      <div class="table-wrap">
+        <table class="host">
+          <colgroup>
+            <col style="width:72px">
+            <col style="width:60px">
+            <col style="width:60px">
+            <col style="width:72px">
+            <col style="width:88px">
+            <col>
+          </colgroup>
+          <thead>
+            <tr><th>seen</th><th>pid</th><th>ppid</th><th>user</th><th>role</th><th>command</th></tr>
+          </thead>
+          <tbody id="host"></tbody>
         </table>
       </div>
     </section>

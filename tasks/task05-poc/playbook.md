@@ -29,6 +29,7 @@ The pieces behind each beat:
 | `lab/scenario.py` | Update agent, install, component registration, and the operator console state. |
 | `lab/services.py` | Updater, DNS coordinator, and the HTTP receiver that answers in OIP shape. |
 | `lab/topology.py` | Mininet topology, the sensor bridge, and the capture. |
+| `lab/host.py` | Process sensor: watches `/proc` for the registered component and its descendants, and publishes a start/stop event list. |
 | `lab/sensor.py` | Rules that read the capture file and produce alerts, decoded rows, flows, and interval statistics. |
 | `blue/` | The defender app: raw tables, expandable events, and the two response actions. |
 
@@ -167,6 +168,8 @@ The sensor is a Mininet host with two interfaces and a Linux bridge between them
 
 The tap therefore sees everything the victim sends and receives. It does not read `dns.log`, `receiver.log`, or the beacon list, and it does not know the scenario phase.
 
+The tap is network-only. A separate host sensor (`lab/host.py`) reads `/proc` for the registered component and its descendants; it is not part of the packet rules and does not read the service logs. It records process starts and stops, including the shell a task starts, and serves them to the Blue Team app.
+
 That includes the V3 download on port 8000. The flow table keeps it because delivery and check-in belong side by side in a defender's view, and a byte count next to the check-in traffic answers the question about how the implant arrived. No rule alerts on the download itself: it is the legitimate update channel, the transfer is signed and well formed, and the only malicious part is the declared component that the signed manifest introduces.
 
 ### Why a Python detector and not Suricata
@@ -230,6 +233,7 @@ Walk through it in this order. Events are newest first, so the story reads from 
 6. **Decoded check-ins.** Every label appears with host name, user, uid, mode and checksum. A lookalike that fails the checksum appears as `T5-DGA-003` instead.
 7. **Flows.** Three conversations: the updater download, the DNS check-ins, and the telemetry upload. The download row stays in the table on purpose; the tap that watches the check-in also carried the package.
 8. **Expanded event.** Every row opens the same way: the rule, the flow, the timestamp, the matching fields, the packet excerpt in hex, and a link to the pcap. Expand one on stage and leave the rest collapsed.
+9. **Host processes.** The table below the events comes from `/proc`, not the pcap: the registered component, the launcher that started it, and any child. Send `id; sleep 1; uname -a` and watch the `/bin/sh` child appear under the component.
 
 If the events table stays empty after the V3 install, check the tap status. A stopped capture or an old last-packet time means the sensor is not reading; the error appears next to the tap state.
 

@@ -18,6 +18,7 @@ from pathlib import Path
 
 import config
 import dga
+import host
 import state
 import topology
 from state import (
@@ -553,6 +554,7 @@ def _derive_callback(queries: list[dict[str, object]], beacons: list[dict[str, o
 def reset_demo() -> str:
     with lab_io_lock:
         _clear_components()
+        host.clear()
         install_version("v2", "Presenter reset client", schedule_callback=False, record_history=False)
         write_mode("passive")
         topology.stop_capture()

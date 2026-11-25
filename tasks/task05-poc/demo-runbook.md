@@ -20,8 +20,8 @@ Short version of the live demo in `tasks/task05-poc`. [playbook.md](./playbook.m
 4. **Delivery.** Client: found, downloaded, verified, installed, and one line naming the component. Say the catalog digest, the RSA signature and the component digest all passed. That is the claim of the lab, so do not rush it. If V3 does not appear, wait three seconds for the next poll.
 5. **Check-in.** Operator: open a decoded row. Mode 4 then 5, with host, user, uid and checksum. Say the label is base32 over an XOR'd record, the coordinator decoded it and answered with the activation address, and the CNAME handoff supplied the C2 host. Read the hostname off the screen and use that name; if it says `victim`, say `victim`. No rows means the coordinator is not `ACTIVE` or the component did not start.
 6. **C2.** Show the POST: one per interval to `/swip/upd/orion.improvementprogram.asmx`, an `Orion/2020.2.4` agent string, Improvement Program fields. Nothing in it names a command. The giveaways are the bare private address and a Windows agent string sent from a Linux host. Say the lab uses plain HTTP so the room can see the body.
-7. **Task.** All beacons, type `id; uname -a`, send. The exit code and output return in the next upload. Say it is deliberately benign and guarded against destructive commands.
-8. **Detect.** Blue Team, bottom-up: first contact with the updater, which is benign and shows the rule working, then coordinator first contact, decoded check-ins, interval statistics after four queries, and the POST. Expand one event for the hex excerpt and pcap link. The sensor reads the capture, not the service logs.
+7. **Task.** All beacons, type `id; sleep 1; uname -a`, send. The sleep keeps the shell alive long enough for the host sensor to see it. The exit code and output return in the next upload. Say it is deliberately benign and guarded against destructive commands.
+8. **Detect.** Blue Team, bottom-up: first contact with the updater, which is benign and shows the rule working, then coordinator first contact, decoded check-ins, interval statistics after four queries, and the POST. Expand one event for the hex excerpt and pcap link. The sensor reads the capture, not the service logs. The Host processes table is the separate `/proc` sensor: it shows the component and the shell it started.
 9. **Contain.** Press **block** under resolver. The console goes quiet, the implant sends one final mode-3 check-in and exits. Optionally restore and use **isolate** for the second mechanism. Do not press **APPLY** while blocked; the lab refuses it and says why.
 10. **Close.** One sentence on what the lab shows and one on what it does not: build-time injection is simulated by a scripted step; encryption and the follow-on intrusion are not modelled.
 
@@ -42,6 +42,7 @@ Reset, run the pipeline, watch the stages and the install, open one decoded chec
 | Why a 4-second beacon? | Compression. The interval rule fires on the fourth query instead of the fourth day. |
 | Is the build compromise real? | No. The build step is scripted; the real build host is not attacked. What is real is the order: the manifest is generated after the swap, so every downstream check passes. |
 | What is missing? | Build-time injection is simulated by a scripted step; no reconnaissance, no encryption, no persistence, no lateral movement. |
+| Can the tap see process creation? | No. The tap sees packets; the Host processes table reads `/proc` for the component and its children. A short command can finish between polls, so the demo uses `id; sleep 1; uname -a`. |
 
 ## What not to claim
 

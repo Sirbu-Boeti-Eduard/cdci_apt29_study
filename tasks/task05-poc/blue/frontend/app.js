@@ -246,6 +246,30 @@ function renderFlows() {
   setCount('flow-count', rows.length, flows.length);
 }
 
+function renderHost() {
+  const host = (latest && latest.host) || {};
+  const events = Array.isArray(host.events) ? host.events : [];
+  const starts = events.filter(event => event.event === 'start');
+  const rows = [];
+  for (const event of starts) {
+    if (!inWindow(event.ts)) continue;
+    const search = [event.time, event.pid, event.ppid, event.user, event.role, event.cmdline].join(' ');
+    if (!matches(search)) continue;
+    rows.push(`
+      <tr>
+        <td class="mono">${escapeHtml(text(event.time))}</td>
+        <td class="mono">${escapeHtml(text(event.pid))}</td>
+        <td class="mono">${escapeHtml(text(event.ppid))}</td>
+        <td class="mono">${escapeHtml(text(event.user))}</td>
+        <td><span class="role ${escapeHtml(text(event.role))}">${escapeHtml(text(event.role))}</span></td>
+        <td class="cmd">${escapeHtml(text(event.cmdline))}</td>
+      </tr>`);
+  }
+  const html = rows.length ? rows.join('') : emptyRow(6, 'no host events yet');
+  commit('host', document.getElementById('host'), html);
+  setCount('host-count', rows.length, starts.length);
+}
+
 function renderRules() {
   const rules = Array.isArray(latest && latest.rules) ? latest.rules : [];
   const rows = [];
@@ -302,6 +326,7 @@ function renderAll() {
   clockOffset = inferClockOffset();
   renderStatus();
   renderEvents();
+  renderHost();
   renderDecodes();
   renderBeacons();
   renderFlows();
