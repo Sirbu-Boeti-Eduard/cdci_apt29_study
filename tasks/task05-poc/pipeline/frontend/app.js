@@ -76,27 +76,6 @@ function renderPipeline(pipeline) {
   message(pipeline.message || '');
 }
 
-function renderBuild(build) {
-  document.getElementById('verify-build').disabled = !build;
-  const state = document.getElementById('provenance-state');
-  const source = document.getElementById('build-source');
-  const changed = document.getElementById('build-changed');
-  const component = document.getElementById('build-component');
-  if (!build) {
-    state.textContent = 'No build';
-    source.textContent = '-';
-    changed.textContent = '-';
-    component.textContent = '-';
-    return;
-  }
-  const files = Array.isArray(build.changed) ? build.changed : [];
-  const sourceHash = (build.source || {})['orion_support.py'] || build.source_tree || '-';
-  source.textContent = String(sourceHash).slice(0, 24);
-  changed.textContent = files.length ? files.join(', ') : 'none';
-  component.textContent = String((build.artifact || {}).component_sha256 || '-').slice(0, 24);
-  state.textContent = files.length ? 'Source differs' : 'Clean build';
-}
-
 async function refresh() {
   try {
     const response = await fetch('/api/state');
@@ -105,7 +84,6 @@ async function refresh() {
     renderReleases(state.catalog || {});
     renderArtifact(state.artifact);
     renderPipeline(state.pipeline || null);
-    renderBuild(state.build || null);
     renderLog(state.build_log || []);
   } catch (error) {
     message(error.message);
@@ -119,18 +97,6 @@ document.getElementById('run-pipeline').addEventListener('click', async () => {
     await refresh();
   } catch (error) {
     message(error.message);
-  }
-});
-
-document.getElementById('verify-build').addEventListener('click', async () => {
-  const node = document.getElementById('provenance-message');
-  try {
-    const result = await post('/api/verify-build');
-    node.textContent = result.match
-      ? 'Trusted rebuild matches the artifact.'
-      : `MISMATCH: artifact ${String(result.artifact).slice(0, 16)} but a rebuild from source gives ${String(result.trusted).slice(0, 16)}.`;
-  } catch (error) {
-    node.textContent = error.message;
   }
 });
 

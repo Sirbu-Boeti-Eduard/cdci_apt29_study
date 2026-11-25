@@ -35,7 +35,6 @@ td code { color:#435768; font:11px ui-monospace,SFMono-Regular,Menlo,monospace; 
 .artifact-meta div { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid var(--line); font-size:11px; }
 .artifact-meta dt { color:var(--muted); }
 .artifact-meta dd { margin:0; color:#35495a; font:11px ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap:anywhere; text-align:right; }
-.artifact-actions { display:flex; gap:9px; flex-wrap:wrap; }
 pre { max-height:290px; overflow:auto; margin:0; padding:13px; border-radius:7px; background:#102235; color:#dbe8f2; font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre-wrap; overflow-wrap:anywhere; }
 .terminal .log-time { color:#7fb2d6; }
 .terminal .log-INFO { color:#7fd6a4; }

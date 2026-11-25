@@ -8,7 +8,7 @@ Presenters: the timed run of show, the speaking lines, and the failure recoverie
 
 | Beat | Open | What appears | Claim it supports |
 | --- | --- | --- | --- |
-| Build | Build & Release, Build provenance | The release pipeline runs checkout, build, manifest, package, sign, and publish; a build step changes one file, and the manifest is generated afterwards and pins it. | A signed release can contain code the source never had. |
+| Build | Build & Release | The release pipeline runs checkout, build, manifest, package, sign, and publish; a build step changes one file, and the manifest is generated afterwards and pins it. | A signed release can contain code the source never had. |
 | Delivery | Build & Release, then Orion Network Manager | A V3 package signed with the supplier key reaches the client through the normal channel; the client checks the catalog digest, the RSA signature, and the component digest, then installs. | A signed update can carry malicious code without breaking the normal trust path. |
 | Introduction of the implant | Orion Network Manager history and installed components | The installer registers `orion-improvement-program` from the signed package and starts one process. V1 and V2 start nothing. | The backdoor arrives with the build, not with the platform. |
 | Dormant check-in | Operator Console, Encoded check-ins | Labels built from the host name and user; mode byte 4, then 5 once the coordinator returns the activation address. | The victim identifier is encoded, and the coordinator decides what happens next. |
@@ -135,7 +135,7 @@ sequenceDiagram
 
 | Application | Address | Role |
 | --- | --- | --- |
-| **Build & Release** | `http://localhost:8080` | Run the release pipeline (checkout, build, manifest, package, sign, publish) and inspect its stages; shows build provenance, the catalog, and pipeline output. |
+| **Build & Release** | `http://localhost:8080` | Run the release pipeline (checkout, build, manifest, package, sign, publish) and inspect its stages; shows the catalog and pipeline output. |
 | **Orion Network Manager** | `http://localhost:8081` | Client update agent, version, and normal update history. |
 | **Operator Console** | `http://localhost:8082` | Beacons, typed commands, and the C2 capture. |
 | **Presentation Dashboard** | `http://localhost:8083` | Reset button and running services. |
@@ -149,7 +149,7 @@ The lab runs a Mininet network in a Linux container behind a private control API
 
 V1 and V2 packages carry only `manifest.json`. The client installs them as data and starts nothing. A V3 manifest may also declare components. Each entry names a file in the same ZIP, pins its SHA-256, and gives the arguments for the service. The installer extracts the package into a work directory, checks every declared digest, records the component inventory, and starts one process per declared component. No other file is executed, and a component the manifest does not declare is never started. This is the build compromise in miniature: the supplier signature covers `orion_support.py` because the supplier's build put it in the package, in the same way the signed Orion update carried the trojanized DLL that SUNBURST lived in.
 
-The build path makes that compromise explicit. `pipeline/src/` holds the approved source; `pipeline/build/build_release.py` copies it into a workspace, runs the `service-compat` step, hashes the workspace, generates the manifest from those hashes, and packages. The step replaces `orion_support.py` with the file in `pipeline/payload/`. Because the manifest is generated after the step, the component digest, the package digest, and the signature all agree with the tampered artifact. **Verify against source** reruns the build without the step; its component hash is the source hash and does not match the artifact. The release app exposes one action: **Run release pipeline**. It runs the build, signing, and publishing jobs in order and reports each stage, so the presenter does not sign or publish by hand.
+The build path makes that compromise explicit. `pipeline/src/` holds the approved source; `pipeline/build/build_release.py` copies it into a workspace, runs the `service-compat` step, hashes the workspace, generates the manifest from those hashes, and packages. The step replaces `orion_support.py` with the file in `pipeline/payload/`. Because the manifest is generated after the step, the component digest, the package digest, and the signature all agree with the tampered artifact. The release app exposes one action: **Run release pipeline**. It runs the build, signing, and publishing jobs in order and reports each stage, so the presenter does not sign or publish by hand.
 
 The DNS and HTTP stage follows Mandiant's description of SUNBURST. Each check-in is a UDP A question whose leftmost label is the encoded record. The coordinator decodes the label and rejects a malformed record or a failed checksum with NXDOMAIN. Otherwise it answers by the coordinator mode file: passive returns `192.0.2.10`, active returns `192.0.2.20`, disabled returns NXDOMAIN. The implant starts at mode byte 4, changes to 5 after the activation address, and sends one final check-in at 3 after the kill switch. An active check-in also resolves the fixed CNAME `handoff.orion-lab.test` and then `receiver.orion-lab.test`, so the HTTP address stays out of the packaged component. [Mandiant SUNBURST](https://cloud.google.com/blog/topics/threat-intelligence/evasive-attacker-leverages-solarwinds-supply-chain-compromises-with-sunburst-backdoor) [SolarWinds update](https://www.sec.gov/Archives/edgar/data/1739942/000173994221000076/swi-20210507.htm)
 
@@ -212,7 +212,7 @@ The Presentation Dashboard has only **Reset lab**. Reset the lab there, and use 
 7. **Compare modes.** PASSIVE returns the passive address with no HTTP follow-on, so new beacons and tasks do not proceed, and the implant drops back to mode 4. DISABLED returns NXDOMAIN; the implant sends one final check-in at mode 3 and exits, so no further queries appear. To run the beacon again, reset the lab and publish V3 again. Reset returns the coordinator to PASSIVE.
 8. **Defender view.** Keep the Blue Team tab open through steps 1 to 6. Rows appear while the beacon runs; the walkthrough order is in the next section.
 9. **Respond.** From the Blue Team app, block the check-in suffix or isolate the victim at the tap, and watch the operator console go quiet. Both actions are reversible, and reset restores both.
-10. **Review and reset.** In Build & Release click **Verify against source**: the trusted rebuild's component hash does not match the artifact's. Use either pcap link, from the operator console or an expanded event. The capture now holds the updater download on port 8000 as well as DNS and receiver traffic. Reset again to clear alerts, flows, and both response actions.
+10. **Review and reset.** Use either pcap link, from the operator console or an expanded event. The capture now holds the updater download on port 8000 as well as DNS and receiver traffic. Reset again to clear alerts, flows, and both response actions.
 
 ## Defender view
 

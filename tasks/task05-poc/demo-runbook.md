@@ -22,15 +22,14 @@ Short version of the live demo in `tasks/task05-poc`. [playbook.md](./playbook.m
 6. **C2.** Show the POST: one per interval to `/swip/upd/orion.improvementprogram.asmx`, an `Orion/2020.2.4` agent string, Improvement Program fields. Nothing in it names a command. The giveaways are the bare private address and a Windows agent string sent from a Linux host. Say the lab uses plain HTTP so the room can see the body.
 7. **Task.** All beacons, type `id; uname -a`, send. The exit code and output return in the next upload. Say it is deliberately benign and guarded against destructive commands.
 8. **Detect.** Blue Team, bottom-up: first contact with the updater, which is benign and shows the rule working, then coordinator first contact, decoded check-ins, interval statistics after four queries, and the POST. Expand one event for the hex excerpt and pcap link. The sensor reads the capture, not the service logs.
-9. **Reveal the build.** Build & Release: click **Verify against source**. It rebuilds without the build step and reports that the artifact's component hash differs from the source. Say: the signature is valid; the build is not.
-10. **Contain.** Press **block** under resolver. The console goes quiet, the implant sends one final mode-3 check-in and exits. Optionally restore and use **isolate** for the second mechanism. Do not press **APPLY** while blocked; the lab refuses it and says why.
-11. **Close.** One sentence on what the lab shows and one on what it does not: build-time injection is simulated by a scripted step; encryption and the follow-on intrusion are not modelled.
+9. **Contain.** Press **block** under resolver. The console goes quiet, the implant sends one final mode-3 check-in and exits. Optionally restore and use **isolate** for the second mechanism. Do not press **APPLY** while blocked; the lab refuses it and says why.
+10. **Close.** One sentence on what the lab shows and one on what it does not: build-time injection is simulated by a scripted step; encryption and the follow-on intrusion are not modelled.
 
-If time is short, cut step 7 and the second mechanism in step 10. Never cut step 4.
+If time is short, cut step 7 and the second mechanism in step 9. Never cut step 4.
 
 ## 60-second version
 
-Reset, run the pipeline, watch the stages and the install, open one decoded check-in, verify the build, block the suffix. Say the build sentence, the delivery sentence and the detection sentence.
+Reset, run the pipeline, watch the stages and the install, open one decoded check-in, block the suffix. Say the build sentence, the delivery sentence and the detection sentence.
 
 ## Questions to expect
 
@@ -58,7 +57,6 @@ Reset, run the pipeline, watch the stages and the install, open one decoded chec
 | --- | --- |
 | No V3 on the client after publish | Wait three seconds, check Generation, read the publish message |
 | Build refused | V3 is already published or a run is in progress; reset or wait |
-| Verify reports a match | The artifact came from a manual build; run the pipeline again |
 | V3 installed, no check-in | Apply `ACTIVE`, then check the component inventory; reset if it is absent |
 | Check-ins decoded, no beacon | Confirm the coordinator is `selected`; reset |
 | No alerts at all | Reset and read the tap error |
