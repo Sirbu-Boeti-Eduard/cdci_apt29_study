@@ -5,7 +5,7 @@ Six peer-reviewed papers bear on the stages the lab implements. The selection ru
 
 in-toto (USENIX Security 2019) checks that authorised actors performed the expected steps in a supply chain and that materials and products match recorded evidence. The authors mapped it retrospectively to 30 historical compromises. It addresses the gap SUNSPOT exploited, with the caveat that it depends on trusted policy, keys, and redundant builds~\cite{intoto}.
 
-The Backstabber's Knife Collection (DIMVA 2020) analysed 469 malicious packages in npm, PyPI, and RubyGems, and studied 174 of them. Trusted distribution can carry malicious code, and conditional execution makes it hard to observe. The sample is open source, so it supports the trust failure but not the build compromise~\cite{backstabber}.
+The Backstabber's Knife Collection (DIMVA 2020) identified 469 malicious packages in npm, PyPI, and RubyGems, and obtained 174 of them. Trusted distribution can carry malicious code, and conditional execution makes it hard to observe. The sample is open source, so it supports the trust failure but not the build compromise~\cite{backstabber}.
 
 The SoK taxonomy by Ladisa et al.\ (IEEE S\&P 2023) separates build-time compromise from distribution and maps 107 attack vectors to safeguards. It places the lab's scenario and the controls in Section~\ref{sec:countermeasures}, but its mappings are not test results~\cite{sok-taxonomy}.
 
@@ -15,9 +15,12 @@ Benedetti et al.\ (ICSE 2025) sampled six package ecosystems; Go ships no artefa
 
 Manasrah et al.\ (JKSU-CIS 2022) detected DGA domains from lexical features of query names. SUNBURST used DNS for control, so query-name telemetry is worth monitoring. The study analyses registrable domains, not subdomains or CNAME targets, so it supports check-in monitoring but not the handoff the lab demonstrates~\cite{dga-detection}.
 
+Table~\ref{tab:papers} summarises the six papers, the evidence each provides, and the limit each sets on this article.
+
 \begin{table}[H]
 \centering
 \footnotesize
+\hyphenpenalty=10000
 \caption{The reviewed papers, their evidence, and what each supports in this article.}
 \label{tab:papers}
 \begin{tabular}{@{}>{\RaggedRight}p{2.3cm}>{\RaggedRight}p{3.3cm}>{\RaggedRight}p{4.2cm}>{\RaggedRight}p{4.9cm}@{}}
@@ -28,10 +31,10 @@ in-toto (2019) & Framework and retrospective mapping & Build and release & Needs
 Backstabber's Knife (2020) & Manual package study & Dependency and execution & Open-source sample, not Orion \\
 Ladisa et al.\ (2023) & Taxonomy and expert surveys & Entire supply chain & Mappings are not PoC results \\
 Gokkaya et al.\ (2026) & Systematic review & Risk management & No SolarWinds-specific experiment \\
-Benedetti et al.\ (2025) & Multi-ecosystem measurement & Build and artifact integrity & Reproducibility does not prove benign code \\
+Benedetti et al.\ (2025) & Multi-ecosystem measurement & Build and artefact integrity & Reproducibility does not prove benign code \\
 Manasrah et al.\ (2022) & DNS query-name classification & Post-installation network & No subdomain or CNAME analysis \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Provenance checks address the build, and DNS monitoring addresses behaviour after installation. A signature addresses neither, and none of the six papers tests the pair together on a signed-update workflow.
+Provenance checks address the build, and DNS monitoring addresses behaviour after installation. A signature addresses neither, and none of the six papers reviewed here tests all three together on a signed-update workflow.

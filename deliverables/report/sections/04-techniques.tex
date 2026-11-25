@@ -1,13 +1,14 @@
 \section{Techniques, indicators and vulnerabilities}
 \label{sec:techniques}
 
-The SolarWinds operation exploited no software vulnerability. The entry into SolarWinds' network is unknown, and every later step used the supplier's own build, signing, and distribution processes. That absence matters analytically: a vulnerability-management programme would not have seen this chain, because there was no vulnerable service to patch.
+Delivering and installing the backdoor exploited no software vulnerability, and both steps used the supplier's own build, signing and distribution processes. Later credential and cloud steps did not. That absence matters analytically: a vulnerability-management programme would not have seen this chain, because there was no vulnerable service to patch.
 
 Table~\ref{tab:attack} lists the ATT\&CK techniques that carry the incident. Table~\ref{tab:iocs} lists the indicators published by Microsoft, CrowdStrike, and CISA. Table~\ref{tab:cves} lists vulnerabilities the group used in other campaigns for initial access; none belongs to the Orion compromise~\cite{nsa-svr}.
 
 \begin{table}[H]
 \centering
 \footnotesize
+\hyphenpenalty=10000
 \caption{Core ATT\&CK techniques in the SolarWinds chain. IDs follow Enterprise v20.1.}
 \label{tab:attack}
 \begin{tabular}{@{}>{\RaggedRight}p{1.8cm}>{\RaggedRight}p{5.3cm}>{\RaggedRight}p{7.4cm}@{}}
@@ -28,6 +29,7 @@ T1606.002 & Forge Web Credentials: SAML & A stolen signing certificate produces 
 \begin{table}[H]
 \centering
 \footnotesize
+\hyphenpenalty=10000
 \caption{Indicators from the incident. Domains are defanged.}
 \label{tab:iocs}
 \begin{tabular}{@{}>{\RaggedRight}p{3.4cm}>{\RaggedRight}p{11.1cm}@{}}
@@ -38,7 +40,7 @@ SUNBURST SHA-256 & \texttt{32519b85c0b422e4656de6e6c41878e95fd95026267daab4215ee
 SUNSPOT SHA-256 & \texttt{c45c9bda8db1d470f1fd0dcc346dc449839eb5ce9a948c70369230af0b3ef168} \\
 Primary control domain & \texttt{avsvmcloud[.]com} \\
 Follow-on domains & \texttt{freescanonline[.]com}, \texttt{deftsecurity[.]com}, \texttt{thedoccloud[.]com} \\
-Second-stage file & \texttt{gracious\_truth.jpg} \\
+One observed loader file & \texttt{gracious\_truth.jpg} \\
 Affected Orion builds & 2019.4 HF5, 2020.2, 2020.2 HF1 \\
 \bottomrule
 \end{tabular}
@@ -47,7 +49,8 @@ Affected Orion builds & 2019.4 HF5, 2020.2, 2020.2 HF1 \\
 \begin{table}[H]
 \centering
 \footnotesize
-\caption{Vulnerabilities used by APT29 in other campaigns, not in the SolarWinds build compromise.}
+\hyphenpenalty=10000
+\caption{Vulnerabilities used by APT29 in other campaigns, not in the SolarWinds build compromise. CVSS v3.x base scores as published by the vendors.}
 \label{tab:cves}
 \begin{tabular}{@{}>{\RaggedRight}p{2.9cm}>{\RaggedRight}p{7.4cm}>{\RaggedRight}p{1.6cm}>{\RaggedRight}p{2.6cm}@{}}
 \toprule

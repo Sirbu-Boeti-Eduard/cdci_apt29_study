@@ -12,12 +12,13 @@
 \usepackage{enumitem}
 \usepackage{amsmath}
 \usepackage{xurl}
+\def\UrlBreaks{\do\/\do\-\do\_}
 \usepackage[hidelinks]{hyperref}
 \usepackage{caption}
 \usepackage{float}
-\captionsetup{font=small,labelfont=bf}
+\captionsetup{font=small,labelfont=bf,justification=raggedright,singlelinecheck=false}
 
-\graphicspath{{../../tasks/task02-ttp/diagrams/}}
+\graphicspath{{figures/}{../../tasks/task02-ttp/diagrams/}}
 
 \setlength{\parskip}{0.35em}
 \setlength{\parindent}{0pt}
@@ -36,10 +37,10 @@
 
 \begin{abstract}
 \noindent
-This article examines APT29's compromise of the SolarWinds Orion build pipeline and a controlled recreation of its delivery and command-and-control stages. It traces the actor's history, the techniques used in the incident, the public evidence of its infrastructure and victims, and the countermeasures proposed for each stage. The recreation uses Mininet and Docker to publish a signed package that carries a component, then reproduces the DNS check-in, mode selection, CNAME handoff, and operator tasking. The client accepts the tampered package because every integrity check passes, which isolates the trust failure from any implementation defect. The article states where the lab diverges from the incident, reviews six peer-reviewed papers on supply-chain integrity and DNS detection, and derives a research question on combining artifact verification with DNS monitoring. It does not claim to reproduce SUNBURST or to measure the effectiveness of the countermeasures it discusses.
+This article examines APT29's compromise of the SolarWinds Orion build pipeline and a controlled recreation of its delivery and command-and-control stages. It traces the actor's history, the techniques used in the incident, the public evidence of its infrastructure and victims, and the countermeasures proposed for each stage. The recreation uses Mininet and Docker to publish a signed package that carries a component, then reproduces the DNS check-in, mode selection and operator tasking, using a fixed handoff name that must return a CNAME before any tasking. The client accepts a malicious package that the supplier pipeline signed, which isolates the signing step from any build compromise. The article states where the lab diverges from the incident, reviews six peer-reviewed papers on supply-chain integrity and DNS detection, and derives a research question on combining provenance checks with DNS monitoring. It does not claim to reproduce SUNBURST or to measure the effectiveness of the countermeasures it discusses.
 \end{abstract}
 
-\noindent\textbf{Keywords:} APT29; SolarWinds; SUNBURST; software supply chain; Mininet; DNS monitoring; reproducible builds.
+{\raggedright\hyphenpenalty=10000\exhyphenpenalty=10000\noindent\textbf{Keywords:} APT29; SolarWinds; SUNBURST; software supply chain; Mininet; DNS monitoring; reproducible builds.\par}
 
 \vspace{1em}
 

@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" width="900" height="300">
+  <defs>
+    <marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#17212b"/>
+    </marker>
+  </defs>
+  <rect x="1" y="1" width="898" height="298" fill="#ffffff" stroke="none"/>
+
+  <rect x="8" y="76" width="142" height="84" fill="#ffffff" stroke="#17212b" stroke-width="1.6"/>
+  <text x="79" y="106" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="bold" fill="#17212b">victim</text>
+  <text x="79" y="126" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#444">orion-01</text>
+  <text x="79" y="144" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#444">10.0.0.5</text>
+
+  <line x1="150" y1="118" x2="196" y2="118" stroke="#17212b" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <rect x="200" y="56" width="150" height="124" fill="#ffffff" stroke="#b42318" stroke-width="1.8"/>
+  <text x="275" y="82" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="bold" fill="#17212b">sensor · br0</text>
+  <text x="275" y="102" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11.5" fill="#444">bridge in the wire</text>
+  <text x="275" y="120" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11.5" fill="#444">tcpdump on br0</text>
+  <text x="275" y="138" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11.5" fill="#444">rules on the capture</text>
+  <text x="275" y="164" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11.5" font-weight="bold" fill="#b42318">CAPTURE POINT</text>
+
+  <line x1="350" y1="118" x2="386" y2="118" stroke="#17212b" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <rect x="390" y="86" width="94" height="64" fill="#ffffff" stroke="#17212b" stroke-width="1.6"/>
+  <text x="437" y="112" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="bold" fill="#17212b">s1 switch</text>
+  <text x="437" y="132" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="11.5" fill="#444">10.0.0.0/24</text>
+
+  <line x1="484" y1="106" x2="540" y2="66" stroke="#17212b" stroke-width="1.6" marker-end="url(#a)"/>
+  <line x1="484" y1="118" x2="540" y2="118" stroke="#17212b" stroke-width="1.6" marker-end="url(#a)"/>
+  <line x1="484" y1="132" x2="540" y2="170" stroke="#17212b" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <rect x="544" y="40" width="348" height="52" fill="#ffffff" stroke="#17212b" stroke-width="1.6"/>
+  <text x="562" y="62" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#17212b">updater · 10.0.0.2:8000</text>
+  <text x="562" y="80" font-family="Helvetica, Arial, sans-serif" font-size="11.5" fill="#444">catalogue, package, signature</text>
+
+  <rect x="544" y="94" width="348" height="52" fill="#ffffff" stroke="#17212b" stroke-width="1.6"/>
+  <text x="562" y="116" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#17212b">DNS coordinator · 10.0.0.3:53</text>
+  <text x="562" y="134" font-family="Helvetica, Arial, sans-serif" font-size="11.5" fill="#444">mode by A record, CNAME handoff</text>
+
+  <rect x="544" y="148" width="348" height="52" fill="#ffffff" stroke="#17212b" stroke-width="1.6"/>
+  <text x="562" y="170" font-family="Helvetica, Arial, sans-serif" font-size="14" font-weight="bold" fill="#17212b">receiver · 10.0.0.4:9000</text>
+  <text x="562" y="188" font-family="Helvetica, Arial, sans-serif" font-size="11.5" fill="#444">OIP-shaped POST, tasking</text>
+
+  <rect x="8" y="232" width="330" height="52" fill="#f6f1e6" stroke="#cfc5b0" stroke-width="1"/>
+  <text x="22" y="256" font-family="Helvetica, Arial, sans-serif" font-size="12.5" font-weight="bold" fill="#17212b">pipeline · client · attacker console · defender</text>
+  <text x="22" y="274" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#444">web apps on localhost:8080–8084, outside the Mininet wire</text>
+
+  <line x1="172" y1="232" x2="172" y2="164" stroke="#444" stroke-width="1.2" stroke-dasharray="4 3"/>
+</svg>
