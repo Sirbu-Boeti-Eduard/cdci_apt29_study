@@ -60,6 +60,8 @@ services:
     image: ${IMAGE_PREFIX:-apt29-task05}-lab:local
     hostname: orion-01
     init: true
+    environment:
+      INSTALL_DELAY_SECONDS: "20"
     depends_on:
       pipeline:
         condition: service_healthy

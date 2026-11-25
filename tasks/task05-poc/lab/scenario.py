@@ -10,6 +10,7 @@ import shlex
 import shutil
 import sys
 import threading
+import time
 import uuid
 import zipfile
 from datetime import datetime, timezone
@@ -38,6 +39,7 @@ from state import (
 VERSIONS = ("v1", "v2", "v3")
 MODES = ("passive", "selected", "disabled")
 UPDATE_POLL_SECONDS = 1.5
+INSTALL_DELAY_SECONDS = max(0, int(os.environ.get("INSTALL_DELAY_SECONDS", "20")))
 QUERY_LOG = WORK_DIR / "queries.jsonl"
 COMPONENT_ROOT = WORK_DIR / "install"
 COMPONENT_INVENTORY = WORK_DIR / "installed-components.json"
@@ -51,6 +53,7 @@ COMPONENT_ARGUMENT = re.compile(r"[A-Za-z0-9._:/-]{1,64}")
 MAX_COMPONENT_BYTES = 32 * 1024
 MONITOR_STOP = threading.Event()
 monitor_thread: threading.Thread | None = None
+pending_install: dict[str, object] | None = None
 
 
 def write_mode(mode: str) -> None:
@@ -436,15 +439,18 @@ def install_version(
     schedule_callback: bool = True,
     record_history: bool = True,
 ) -> dict[str, object]:
+    global pending_install
     if version not in VERSIONS:
         raise ValueError("Choose V1, V2, or V3.")
     with lab_io_lock:
+        pending_install = None
         catalog, _output = _fetch_catalog()
         entry = _release_entry(catalog, version)
         return _install_release(entry, reason, schedule_callback, record_history)
 
 
 def _channel_check() -> str:
+    global pending_install
     catalog, output = _fetch_catalog()
     with state.state_lock:
         installed_version = state.current_version
@@ -462,6 +468,19 @@ def _channel_check() -> str:
     target = max(later, key=lambda entry: VERSIONS.index(str(entry["version"])))
     version = str(target["version"])
     if target.get("mandatory") is True:
+        now = time.monotonic()
+        pending = pending_install
+        if pending is None or pending.get("version") != version:
+            pending = {"version": version, "due": now + INSTALL_DELAY_SECONDS}
+            pending_install = pending
+            append_history(
+                f"{version.upper()} rollout received; installation scheduled in {INSTALL_DELAY_SECONDS} seconds."
+            )
+        remaining = max(0, int(round(float(pending["due"]) - now)))
+        if remaining > 0:
+            _set_update_status("available", f"{version.upper()} will install in {remaining}s", version, 0)
+            return output
+        pending_install = None
         _install_release(target, "Mandatory channel rollout")
     else:
         _set_update_status("available", f"{version.upper()} is available to install", version, 0)
@@ -476,14 +495,16 @@ def check_for_updates() -> str:
         with state.state_lock:
             status = dict(state.update_status)
         if status["state"] == "available":
-            return f"{status['available_version']} is available. Install it from the client."
+            return f"{status['available_version']}: {status['message']}."
         if status["state"] == "installed":
             return str(status["message"])
         return f"Update check completed: {status['message']}"
 
 
 def install_available_update() -> str:
+    global pending_install
     with lab_io_lock:
+        pending_install = None
         catalog, _output = _fetch_catalog()
         with state.state_lock:
             version = state.update_status.get("available_version")
@@ -495,8 +516,9 @@ def install_available_update() -> str:
 
 
 def start_update_monitor() -> None:
-    global monitor_thread
+    global monitor_thread, pending_install
     MONITOR_STOP.clear()
+    pending_install = None
     try:
         QUERY_LOG.write_text("", encoding="utf-8")
     except OSError:
@@ -658,6 +680,8 @@ def attacker_state() -> dict[str, object]:
 
 
 def stop_update_monitor() -> None:
+    global pending_install
     MONITOR_STOP.set()
+    pending_install = None
     if monitor_thread is not None and monitor_thread.is_alive():
         monitor_thread.join(timeout=2)

@@ -17,7 +17,7 @@ Short version of the live demo in `tasks/task05-poc`. [playbook.md](./playbook.m
 1. **Frame it.** On the dashboard, say the customer verifies a signed update correctly and still installs a backdoor, because the supplier's build put one inside the package the supplier signed. Add that the packets, signatures and commands are real, and that the implant is a Python reimplementation of documented behaviour, not the original binary.
 2. **Baseline.** Client tab: V2, clean history, no registered components. Nothing looks wrong yet, and nothing will later either.
 3. **Publish the dependency and run the pipeline.** Package Index: publish `orion-compat` `2.0.0`; the internal index has `1.4.2`, so the public package is now the higher version. Build & Release: choose **Stable · mandatory** and click **Run release pipeline**. The stages fill in order: checkout, build, manifest, package, sign, publish. The build log says `resolved orion-compat 2.0.0 from the public index (internal 1.4.2)`, the install hook changes `orion_support.py`, and the manifest is generated afterwards and pins the changed hash. Say the source is clean and the signed artifact is not. Signing and publishing are pipeline jobs; there is nothing else to click.
-4. **Delivery.** Client: found, downloaded, verified, installed, and one line naming the component. Say the catalog digest, the RSA signature and the component digest all passed. That is the claim of the lab, so do not rush it. If V3 does not appear, wait three seconds for the next poll.
+4. **Delivery.** Client: after the pipeline publishes, the status reads `V3 will install in 20s`. Use the countdown to explain the build and the trust path, then watch found, downloaded, verified, installed, and one line naming the component. Say the catalog digest, the RSA signature and the component digest all passed. That is the claim of the lab, so do not rush it. If V3 does not appear, check the countdown and the next poll.
 5. **Check-in.** Operator: open a decoded row. Mode 4 then 5, with host, user, uid and checksum. Say the label is base32 over an XOR'd record, the coordinator decoded it and answered with the activation address, and the CNAME handoff supplied the C2 host. Read the hostname off the screen and use that name; if it says `victim`, say `victim`. No rows means the coordinator is not `ACTIVE` or the component did not start.
 6. **C2.** Show the POST: one per interval to `/swip/upd/orion.improvementprogram.asmx`, an `Orion/2020.2.4` agent string, Improvement Program fields. Nothing in it names a command. The giveaways are the bare private address and a Windows agent string sent from a Linux host. Say the lab uses plain HTTP so the room can see the body.
 7. **Task.** All beacons, type `id; sleep 1; uname -a`, send. The sleep keeps the shell alive long enough for the host sensor to see it. The exit code and output return in the next upload. Say it is deliberately benign and guarded against destructive commands. For the data beat, send `collect customers.csv` instead; it expands to `base64 -w0` on the decoy file, the result upload is large enough for `T5-EXFIL-001`, and the host table shows the `base64` child.
@@ -29,7 +29,7 @@ If time is short, cut step 7 and the second mechanism in step 9. Never cut step 
 
 ## 60-second version
 
-Reset, publish `orion-compat 2.0.0` in the Package Index, run the pipeline, watch the stages and the install, open one decoded check-in, block the suffix. Say the build sentence, the delivery sentence and the detection sentence.
+Reset, publish `orion-compat 2.0.0` in the Package Index, run the pipeline, use the 20-second countdown to set up the delivery, watch the install, open one decoded check-in, block the suffix. Say the build sentence, the delivery sentence and the detection sentence.
 
 ## Questions to expect
 
@@ -59,7 +59,7 @@ Reset, publish `orion-compat 2.0.0` in the Package Index, run the pipeline, watc
 
 | Symptom | Do this |
 | --- | --- |
-| No V3 on the client after publish | Wait three seconds, check Generation, read the publish message |
+| No V3 on the client after publish | Wait for the 20s countdown; check Generation and the publish message |
 | Build resolves 1.4.2, not 2.0.0 | Publish `orion-compat 2.0.0` in Package Index; check the pipeline log |
 | Package Index empty after reset | Expected; publish the package before running the pipeline |
 | Build refused | V3 is already published or a run is in progress; reset or wait |
