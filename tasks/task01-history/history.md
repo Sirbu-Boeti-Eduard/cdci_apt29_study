@@ -9,7 +9,7 @@ Written by: Eduard
 Finding (source-reported): ESET reported that Operation Ghost began in 2013 and remained active when its researchers published their findings in 2019. ESET linked the campaign to the Dukes (APT29) and reported targeting foreign ministries in at least three European countries and an EU member state's embassy in Washington, D.C.
 
 References:
-- [ESET, "Operation Ghost: The DNC hacking group 'Dukes' still attacks government targets, ESET discovers"](https://www.eset.com/au/about/newsroom/press-releases1/press-releases/operation-ghost-the-dnc-hacking-group-dukes-still-attacks-government-targets-eset-discovers-4/), 17 October 2019, opening paragraphs.
+- [ESET, "Operation Ghost Hunt: The DNC hacking group 'Dukes' still attacks government targets, ESET discovers"](https://www.eset.com/us/about/newsroom/press-releases/operation-ghost-hunt-the-dnc-hacking-group-dukes-still-attacks-government-targets-eset-discovers-1/), 17 October 2019, opening paragraphs.
 
 Written by: Eduard
 ------------------

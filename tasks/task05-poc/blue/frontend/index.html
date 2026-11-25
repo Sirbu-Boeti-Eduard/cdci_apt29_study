@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>blue · tap</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <span class="brand">blue</span>
+      <div class="chips">
+        <span class="chip" id="chip-tap">tap -</span>
+        <span class="chip" id="chip-packets">0 pkt</span>
+        <span class="chip" id="chip-last">last -</span>
+        <a class="chip" href="/capture.pcap">pcap</a>
+      </div>
+      <div class="controls">
+        <span class="control">
+          <span class="control-label">resolver</span>
+          <span class="control-state" id="resolver-state">-</span>
+          <button type="button" data-action="block-dns">block</button>
+          <button type="button" data-action="unblock-dns">clear</button>
+        </span>
+        <span class="control">
+          <span class="control-label">tap</span>
+          <span class="control-state" id="tap-state">-</span>
+          <button type="button" data-action="isolate">isolate</button>
+          <button type="button" data-action="restore-tap">restore</button>
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <div class="filterbar">
+    <div class="filter-inner">
+      <input id="query" type="search" autocomplete="off" spellcheck="false" placeholder="filter" aria-label="Filter rows">
+      <select id="range" aria-label="Time range">
+        <option value="0">all</option>
+        <option value="60">last 1m</option>
+        <option value="300">last 5m</option>
+        <option value="900">last 15m</option>
+        <option value="3600">last 1h</option>
+      </select>
+      <span class="message" id="message" role="status" aria-live="polite"></span>
+    </div>
+  </div>
+
+  <main>
+    <section class="panel">
+      <div class="panel-head">
+        <h2>events</h2>
+        <span class="count" id="alert-count">0</span>
+      </div>
+      <div class="table-wrap">
+        <table class="events">
+          <colgroup>
+            <col style="width:72px">
+            <col style="width:86px">
+            <col style="width:118px">
+            <col style="width:52px">
+            <col style="width:118px">
+            <col style="width:52px">
+            <col style="width:54px">
+            <col style="width:56px">
+            <col>
+          </colgroup>
+          <thead>
+            <tr><th>time</th><th>rule</th><th>src</th><th>sport</th><th>dst</th><th>dport</th><th>proto</th><th>bytes</th><th>detail</th></tr>
+          </thead>
+          <tbody id="alerts"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>decoded check-ins</h2>
+        <span class="count" id="decode-count">0</span>
+      </div>
+      <div class="table-wrap">
+        <table class="decodes">
+          <colgroup>
+            <col style="width:72px">
+            <col style="width:118px">
+            <col style="width:128px">
+            <col style="width:112px">
+            <col style="width:100px">
+            <col style="width:112px">
+            <col style="width:150px">
+            <col style="width:80px">
+          </colgroup>
+          <thead>
+            <tr><th>time</th><th>src</th><th>hostname</th><th>user</th><th>uid</th><th>mode</th><th>checksum</th><th>repeats</th></tr>
+          </thead>
+          <tbody id="decodes"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>beacon intervals</h2>
+        <span class="count" id="beacon-count">0</span>
+      </div>
+      <div class="table-wrap">
+        <table class="beacons">
+          <colgroup>
+            <col style="width:118px">
+            <col style="width:72px">
+            <col style="width:72px">
+            <col style="width:84px">
+            <col style="width:84px">
+            <col style="width:72px">
+            <col style="width:84px">
+            <col style="width:84px">
+          </colgroup>
+          <thead>
+            <tr><th>src</th><th>samples</th><th>intervals</th><th>mean</th><th>spread</th><th>cv</th><th>first</th><th>last</th></tr>
+          </thead>
+          <tbody id="beacons"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>flows</h2>
+        <span class="count" id="flow-count">0</span>
+      </div>
+      <div class="table-wrap">
+        <table class="flows">
+          <colgroup>
+            <col style="width:118px">
+            <col style="width:118px">
+            <col style="width:60px">
+            <col style="width:60px">
+            <col style="width:70px">
+            <col style="width:80px">
+            <col style="width:84px">
+            <col style="width:84px">
+          </colgroup>
+          <thead>
+            <tr><th>src</th><th>dst</th><th>port</th><th>proto</th><th>packets</th><th>bytes</th><th>first</th><th>last</th></tr>
+          </thead>
+          <tbody id="flows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>ruleset</h2>
+        <span class="count" id="rule-count">0</span>
+      </div>
+      <div class="table-wrap">
+        <table class="rules">
+          <colgroup>
+            <col style="width:96px">
+            <col>
+          </colgroup>
+          <thead>
+            <tr><th>id</th><th>name</th></tr>
+          </thead>
+          <tbody id="rules"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,65 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{ragged2e}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{xurl}
+\def\UrlBreaks{\do\/\do\-\do\_}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{pdftitle={APT29 and the SolarWinds Supply-Chain Compromise},pdfauthor={CDCI Assignment 1},pdfsubject={CDCI Assignment 1 report},pdfkeywords={APT29; SolarWinds; SUNBURST; software supply chain; Mininet; DNS monitoring; reproducible builds},pdflang={en-GB}}
+\usepackage{caption}
+\usepackage{float}
+\captionsetup{font=small,labelfont=bf,justification=raggedright,singlelinecheck=false}
+
+\graphicspath{{figures/}{../../tasks/task02-ttp/diagrams/}}
+
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{0pt}
+\setlength{\emergencystretch}{2em}
+\widowpenalty=10000
+\clubpenalty=10000
+\renewcommand{\arraystretch}{1.15}
+
+\title{\textbf{APT29 and the SolarWinds Supply-Chain Compromise}\\[0.4em]
+\large From SUNSPOT to a Controlled Recreation in Mininet and Docker}
+
+\author{CDCI Assignment 1}
+\date{November 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+\noindent
+This article examines APT29's compromise of the SolarWinds Orion build pipeline and a controlled recreation of its delivery and command-and-control stages. It traces the actor's history, the techniques used in the incident, the public evidence of its infrastructure and victims, and the countermeasures proposed for each stage. The recreation uses Mininet and Docker to publish a signed package that carries a component, then reproduces the DNS check-in, mode selection and operator tasking, using a fixed CNAME handoff that must resolve before any tasking. The client accepts a malicious package that the supplier pipeline signed, which isolates the signing step from any build compromise. The article states where the lab diverges from the incident, reviews six peer-reviewed papers on supply-chain integrity and DNS detection, and derives a research question on combining provenance checks with DNS monitoring. It does not claim to reproduce SUNBURST or to measure the effectiveness of the countermeasures it discusses.
+\end{abstract}
+
+{\raggedright\hyphenpenalty=10000\exhyphenpenalty=10000\noindent\textbf{Keywords:} APT29; SolarWinds; SUNBURST; software supply chain; Mininet; DNS monitoring; reproducible builds.\par}
+
+\vspace{1em}
+
+\input{sections/01-introduction}
+\input{sections/02-actor}
+\input{sections/03-operation}
+\input{sections/04-techniques}
+\input{sections/05-online}
+\input{sections/06-victims}
+\input{sections/07-recreation}
+\input{sections/08-detection}
+\input{sections/09-countermeasures}
+\input{sections/10-literature}
+\input{sections/11-question}
+\input{sections/12-conclusion}
+
+\input{references}
+
+\end{document}

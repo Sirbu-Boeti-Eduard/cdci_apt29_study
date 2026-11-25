@@ -1,0 +1,69 @@
+\section{Techniques, indicators and vulnerabilities}
+\label{sec:techniques}
+
+Delivering and installing the backdoor exploited no software vulnerability, and both steps used the supplier's own build, signing and distribution processes. Later credential and cloud steps did not. That absence matters analytically: a vulnerability-management programme would not have seen this chain, because there was no vulnerable service to patch.
+
+Table~\ref{tab:attack} lists the ATT\&CK techniques that carry the incident. Table~\ref{tab:iocs} lists the indicators published by Microsoft, CrowdStrike, and CISA. Table~\ref{tab:cves} lists vulnerabilities the group used in other campaigns for initial access; none belongs to the Orion compromise~\cite{nsa-svr}.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\hyphenpenalty=10000
+\caption{Core ATT\&CK techniques in the SolarWinds chain. IDs follow Enterprise v20.1.}
+\label{tab:attack}
+\begin{tabular}{@{}>{\RaggedRight}p{1.8cm}>{\RaggedRight}p{5.3cm}>{\RaggedRight}p{7.4cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Technique} & \textbf{Use in the incident} \\
+\midrule
+T1195.002 & Compromise Software Supply Chain & SUNBURST shipped inside the signed Orion component~\cite{mandiant-campaign} \\
+T1553.002 & Subvert Trust Controls: Code Signing & The tampered build was signed by SolarWinds' own process~\cite{crowdstrike-sunspot} \\
+T1568.002 & Dynamic Resolution: DGA & Subdomains under \texttt{avsvmcloud[.]com} encode the victim~\cite{mandiant-sunburst-details} \\
+T1071.004 & Application Layer Protocol: DNS & Check-ins and the mode-selecting A record~\cite{mandiant-sunburst-details} \\
+T1071.001 & Application Layer Protocol: Web & OIP-shaped HTTPS command and control~\cite{mandiant-sunburst-details} \\
+T1546.012 & Event Triggered Execution: IFEO & Debugger value on \texttt{dllhost.exe} starts the loader~\cite{microsoft-teardrop} \\
+T1606.002 & Forge Web Credentials: SAML & A stolen signing certificate produces valid tokens to Microsoft 365 mail~\cite{cisa-aa20-352a} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\hyphenpenalty=10000
+\caption{Indicators from the incident. Domains are defanged.}
+\label{tab:iocs}
+\begin{tabular}{@{}>{\RaggedRight}p{3.4cm}>{\RaggedRight}p{11.1cm}@{}}
+\toprule
+\textbf{Indicator} & \textbf{Value} \\
+\midrule
+SUNBURST SHA-256 & \texttt{32519b85c0b422e4656de6e6c41878e95fd95026267daab4215ee59c107d6c77} \\
+SUNSPOT SHA-256 & \texttt{c45c9bda8db1d470f1fd0dcc346dc449839eb5ce9a948c70369230af0b3ef168} \\
+Primary control domain & \texttt{avsvmcloud[.]com} \\
+Follow-on domains & \texttt{freescanonline[.]com}, \texttt{deftsecurity[.]com}, \texttt{thedoccloud[.]com} \\
+One observed loader file & \texttt{gracious\_truth.jpg} \\
+Affected Orion builds & 2019.4 HF5, 2020.2, 2020.2 HF1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\hyphenpenalty=10000
+\caption{Vulnerabilities used by APT29 in other campaigns, not in the SolarWinds build compromise. CVSS v3.x base scores as published by the vendors.}
+\label{tab:cves}
+\begin{tabular}{@{}>{\RaggedRight}p{2.9cm}>{\RaggedRight}p{7.4cm}>{\RaggedRight}p{1.6cm}>{\RaggedRight}p{2.6cm}@{}}
+\toprule
+\textbf{CVE} & \textbf{Product} & \textbf{CVSS} & \textbf{Year used} \\
+\midrule
+CVE-2018-13379 & Fortinet FortiOS SSL VPN, path traversal & 9.8 & 2019--2020 \\
+CVE-2019-9670 & Zimbra Collaboration Suite, XXE injection & 9.8 & 2019--2020 \\
+CVE-2019-11510 & Pulse Secure VPN, arbitrary file read & 10.0 & 2019--2020 \\
+CVE-2019-19781 & Citrix ADC and Gateway, directory traversal & 9.8 & 2020--2021 \\
+CVE-2020-4006 & VMware Workspace ONE Access, command injection & 9.1 & 2020--2021 \\
+CVE-2023-42793 & JetBrains TeamCity, authentication bypass & 9.8 & 2023 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The CVE list shows the group's other route into networks: internet-facing appliances and collaboration servers that were unpatched or weakly configured. The SolarWinds campaign bypassed that route entirely. For a defender, the two patterns require different controls. Patching addresses Table~\ref{tab:cves}. Nothing in a patch cycle addresses Table~\ref{tab:attack}, which is the argument for the build controls in Section~\ref{sec:countermeasures}.
