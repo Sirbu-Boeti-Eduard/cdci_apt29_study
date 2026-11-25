@@ -6,7 +6,7 @@ Short version of the live demo in `tasks/task05-poc`. [playbook.md](./playbook.m
 
 1. Bring the stack up from `tasks/task05-poc`, as described in *Start and control* in the playbook.
 2. Wait until the dashboard lists every service as running.
-3. Open Dashboard, Build & Release, Orion Network Manager, Operator Console and Blue Team, in that order.
+3. Open Dashboard, Build & Release, Orion Network Manager, Operator Console and Blue Team, in that order. The Attack story ribbon on the dashboard tracks the run from Build to Response; it lights a phase as each event lands.
 4. Reset once. Confirm client V2, coordinator `PASSIVE`, tap `forwarding`, empty tables.
 5. Rehearse one pipeline run, then reset again. Never start with V3 already published; the pipeline refuses a second run until the channel is reset.
 6. If anyone edited `pipeline/payload/orion_support.py`, the pipeline picks it up automatically; there is no separate sample zip to rebuild.

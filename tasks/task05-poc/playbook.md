@@ -138,7 +138,7 @@ sequenceDiagram
 | **Build & Release** | `http://localhost:8080` | Run the release pipeline (checkout, build, manifest, package, sign, publish) and inspect its stages; shows the catalog and pipeline output. |
 | **Orion Network Manager** | `http://localhost:8081` | Client update agent, version, and normal update history. |
 | **Operator Console** | `http://localhost:8082` | Beacons, typed commands, and the C2 capture. |
-| **Presentation Dashboard** | `http://localhost:8083` | Reset button and running services. |
+| **Presentation Dashboard** | `http://localhost:8083` | Reset button, the seven-phase attack-story ribbon, and running services. |
 | **Blue Team** | `http://localhost:8084` | Inline sensor findings, decoded queries, beacon statistics, flows, and the two enforced response actions. |
 
 Open each address in its own tab; the apps do not link to each other. Nginx routes ports 8080 to 8084.
