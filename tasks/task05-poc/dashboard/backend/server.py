@@ -25,6 +25,7 @@ SERVICES = (
     ("lab", "http://lab:8080/health"),
     ("client", "http://client:8080/health"),
     ("attacker", "http://attacker:8080/health"),
+    ("blue", "http://blue:8080/health"),
     ("dashboard", "http://127.0.0.1:8080/health"),
     ("gateway", "http://gateway:8083/health"),
 )
@@ -105,10 +106,22 @@ class DashboardHandler(BaseHTTPRequestHandler):
             if path != "/api/reset":
                 self.send_json(404, {"error": "Not found."})
                 return
-            pipeline = call_pipeline("/api/reset", "POST", {}, presenter=True)
-            lab = call_lab("/api/reset", "POST", {})
-            message = f"{pipeline.get('message', 'Release channel reset.')} {lab.get('message', 'Lab reset.')}"
-            self.send_json(200, {"message": message})
+            notes: list[str] = []
+            failures: list[str] = []
+            try:
+                pipeline = call_pipeline("/api/reset", "POST", {}, presenter=True)
+                notes.append(str(pipeline.get("message", "Release channel reset.")))
+            except RuntimeError as exc:
+                failures.append(f"Release channel reset failed: {exc}")
+            try:
+                lab = call_lab("/api/reset", "POST", {})
+                notes.append(str(lab.get("message", "Lab reset.")))
+            except RuntimeError as exc:
+                failures.append(f"Lab reset failed: {exc}")
+            if failures:
+                self.send_json(400, {"error": " ".join(failures + notes)})
+                return
+            self.send_json(200, {"message": " ".join(notes)})
         except (ValueError, json.JSONDecodeError, OSError, RuntimeError) as exc:
             self.send_json(400, {"error": str(exc)})
 

@@ -8,13 +8,70 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 
+import config
 import scenario
+import sensor
 import state
 import topology
 from state import BEACONS_PATH, DNS_LOG, RECEIVER_LOG, RESULT_LOG, RESULTS_PATH, UPDATE_LOG, WORK_DIR, append_history
 
 
 httpd: ThreadingHTTPServer | None = None
+
+
+def blue_state() -> dict[str, object]:
+    """Sensor snapshot plus the state of the two enforcement points."""
+    snapshot = state.read_sensor_state()
+    with state.state_lock:
+        mode = state.coordinator_mode
+        blocked = state.dns_block_active
+        previous = state.dns_block_previous_mode
+    return {
+        "sensor": topology.sensor_status(),
+        "rules": [dict(rule) for rule in sensor.RULES],
+        "alerts": snapshot.get("alerts", []),
+        "decodes": snapshot.get("decodes", []),
+        "beacons": snapshot.get("beacons", []),
+        "flows": snapshot.get("flows", []),
+        "counters": snapshot.get("counters", {}),
+        "suffix": sensor.CHECKIN_SUFFIX,
+        "resolver": {"blocked": blocked, "previous_mode": previous, "mode": mode},
+    }
+
+
+def apply_response(action: str) -> str:
+    """Run one defender response; each one changes real lab state."""
+    if action == "block-dns":
+        with state.state_lock:
+            if state.dns_block_active:
+                return "The resolver already answers NXDOMAIN for the check-in suffix."
+            state.dns_block_previous_mode = state.coordinator_mode
+        scenario.write_mode("disabled")
+        with state.state_lock:
+            state.dns_block_active = True
+        return (
+            f"Resolver block on: the coordinator now answers NXDOMAIN for {sensor.CHECKIN_SUFFIX}. "
+            "The beacon loop stops at its next check-in."
+        )
+    if action == "unblock-dns":
+        with state.state_lock:
+            if not state.dns_block_active:
+                return "No resolver block is active."
+            previous = state.dns_block_previous_mode
+        scenario.write_mode(previous)
+        with state.state_lock:
+            state.dns_block_active = False
+        return f"Resolver block cleared: the coordinator is back to {previous}."
+    if action == "isolate":
+        detail = topology.set_isolation(True)
+        return (
+            f"Tap isolation on: the bridge drops traffic from {config.VICTIM_IP} "
+            f"at {detail.get('mechanism') or 'the bridge'}. Beacons stop immediately."
+        )
+    if action == "restore-tap":
+        topology.set_isolation(False)
+        return "Tap isolation cleared: the bridge forwards the victim's traffic again."
+    raise ValueError("Unknown response action.")
 
 
 class LabApiHandler(BaseHTTPRequestHandler):
@@ -35,6 +92,8 @@ class LabApiHandler(BaseHTTPRequestHandler):
             self.send_json(200, scenario.client_state())
         elif path == "/api/attacker-state":
             self.send_json(200, scenario.attacker_state())
+        elif path == "/api/blue-state":
+            self.send_json(200, blue_state())
         elif path == "/capture.pcap":
             if not topology.capture_is_ready():
                 self.send_json(404, {"error": topology.capture_error or "No packet capture is ready yet."})
@@ -74,12 +133,23 @@ class LabApiHandler(BaseHTTPRequestHandler):
                 message = scenario.select_version(str(body.get("version", "")))
             elif path == "/api/set-mode":
                 mode = str(body.get("mode", ""))
+                with state.state_lock:
+                    blocked = state.dns_block_active
+                if blocked and mode != "disabled":
+                    raise ValueError(
+                        "A resolver block is active, so the coordinator stays disabled. "
+                        "Clear the block in the Blue Team app before changing the mode."
+                    )
                 scenario.write_mode(mode)
                 display = "active" if mode == "selected" else mode
                 message = f"Coordinator response is {display} for V3 check-ins until changed or reset."
             elif path == "/api/queue-task":
                 message = scenario.queue_task(str(body.get("command", "")), str(body.get("target", "all")))
+            elif path == "/api/response":
+                message = apply_response(str(body.get("action", "")))
             elif path == "/api/reset":
+                topology.set_isolation(False)
+                state.clear_response_state()
                 message = scenario.reset_demo()
             else:
                 self.send_json(404, {"error": "Not found."})

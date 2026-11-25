@@ -1,4 +1,4 @@
-"""Client update flow and attacker-side DNS/HTTP exercise behavior."""
+"""Client update flow and attacker-side DNS/HTTP C2 behavior."""
 
 from __future__ import annotations
 
@@ -6,9 +6,10 @@ import json
 import hashlib
 import os
 import re
+import shlex
+import shutil
 import sys
 import threading
-import time
 import uuid
 import zipfile
 from datetime import datetime, timezone
@@ -16,6 +17,7 @@ from io import BytesIO
 from pathlib import Path
 
 import config
+import dga
 import state
 import topology
 from state import (
@@ -34,9 +36,15 @@ from state import (
 
 VERSIONS = ("v1", "v2", "v3")
 MODES = ("passive", "selected", "disabled")
-DEMO_DELAY_SECONDS = 3
-BEACON_INTERVAL_SECONDS = 4
 UPDATE_POLL_SECONDS = 1.5
+QUERY_LOG = WORK_DIR / "queries.jsonl"
+COMPONENT_ROOT = WORK_DIR / "install"
+COMPONENT_INVENTORY = WORK_DIR / "installed-components.json"
+COMPONENT_LOG = WORK_DIR / "component.log"
+COMPONENT_NAME = re.compile(r"[a-z][a-z0-9-]{2,31}")
+COMPONENT_FILE = re.compile(r"[a-z][a-z0-9_-]{0,39}\.py")
+COMPONENT_ARGUMENT = re.compile(r"[A-Za-z0-9._:/-]{1,64}")
+MAX_COMPONENT_BYTES = 32 * 1024
 MONITOR_STOP = threading.Event()
 monitor_thread: threading.Thread | None = None
 
@@ -154,8 +162,52 @@ def _release_entry(catalog: dict[str, object], version: str) -> dict[str, object
     raise RuntimeError(f"{version.upper()} is not published to the update channel.")
 
 
+def _write_json(path: Path, value: object) -> None:
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(value, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    os.replace(temporary, path)
+
+
+def _valid_components(value: object) -> list[dict[str, object]]:
+    if not isinstance(value, list) or not 1 <= len(value) <= 2:
+        raise RuntimeError("A V3 package may declare one or two components.")
+    components: list[dict[str, object]] = []
+    names: set[str] = set()
+    files: set[str] = set()
+    for item in value:
+        if not isinstance(item, dict) or set(item) != {"name", "file", "sha256", "args"}:
+            raise RuntimeError("Component fields must be name, file, sha256, and args.")
+        name = item.get("name")
+        filename = item.get("file")
+        digest = item.get("sha256")
+        arguments = item.get("args")
+        if not isinstance(name, str) or not COMPONENT_NAME.fullmatch(name) or name in names:
+            raise RuntimeError("A package component name is invalid or repeated.")
+        if not isinstance(filename, str) or not COMPONENT_FILE.fullmatch(filename) or filename in files:
+            raise RuntimeError("A package component file name is invalid or repeated.")
+        if not isinstance(digest, str) or not re.fullmatch(r"[a-f0-9]{64}", digest):
+            raise RuntimeError("A package component is missing its SHA-256 digest.")
+        if (
+            not isinstance(arguments, list)
+            or len(arguments) > 6
+            or not all(isinstance(argument, str) and COMPONENT_ARGUMENT.fullmatch(argument) for argument in arguments)
+        ):
+            raise RuntimeError("A package component has invalid startup arguments.")
+        names.add(name)
+        files.add(filename)
+        components.append({"name": name, "file": filename, "sha256": digest, "args": list(arguments)})
+    return components
+
+
 def _validate_manifest(value: object, version: str) -> dict[str, object]:
-    if not isinstance(value, dict) or set(value) != {"product", "version", "release_notes", "client_config", "exercise"}:
+    allowed = {"product", "version", "release_notes", "client_config"}
+    if version == "v3":
+        allowed.add("components")
+    if (
+        not isinstance(value, dict)
+        or not {"product", "version", "release_notes", "client_config"}.issubset(value)
+        or set(value) - allowed
+    ):
         raise RuntimeError("Downloaded package manifest has an invalid format.")
     if value.get("product") != "Orion Network Manager" or value.get("version") != version:
         raise RuntimeError("Downloaded package does not match the catalog version.")
@@ -169,12 +221,79 @@ def _validate_manifest(value: object, version: str) -> dict[str, object]:
         raise RuntimeError("Package contains an unsupported client theme.")
     if not isinstance(config.get("topology"), bool) or not isinstance(config.get("health_summary"), bool):
         raise RuntimeError("Client feature settings must be true or false.")
-    exercise = value.get("exercise")
-    if not isinstance(exercise, dict) or set(exercise) != {"diagnostic_checkin"}:
-        raise RuntimeError("Exercise settings are invalid.")
-    if not isinstance(exercise.get("diagnostic_checkin"), bool):
-        raise RuntimeError("The diagnostic setting must be true or false.")
+    if "components" in value:
+        _valid_components(value["components"])
     return value
+
+
+def _stop_components() -> None:
+    """Stop any registered component process inside the victim network namespace."""
+    inventory = _read_json(COMPONENT_INVENTORY) or {}
+    components = [item for item in inventory.get("components", []) if isinstance(item, dict)]
+    if not components:
+        return
+    commands: list[str] = []
+    for component in components:
+        pid = str(component.get("pid") or "")
+        path = str(component.get("path") or "")
+        if pid.isdigit():
+            commands.append(f"kill -TERM {pid} 2>/dev/null")
+        if path:
+            commands.append(f"pkill -f {shlex.quote(path)} 2>/dev/null")
+    if commands:
+        commands.append("sleep 0.3")
+        for component in components:
+            pid = str(component.get("pid") or "")
+            if pid.isdigit():
+                commands.append(f"kill -9 {pid} 2>/dev/null")
+        commands.append("true")
+        topology.host_command("victim", ["/bin/sh", "-c", "; ".join(commands)])
+    for component in components:
+        component["pid"] = None
+        component["status"] = "stopped"
+    inventory["components"] = components
+    _write_json(COMPONENT_INVENTORY, inventory)
+
+
+def _clear_components() -> None:
+    _stop_components()
+    shutil.rmtree(COMPONENT_ROOT, ignore_errors=True)
+    for path in (COMPONENT_INVENTORY, COMPONENT_LOG):
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def _start_components(version: str, manifest: dict[str, object], install_dir: Path) -> list[dict[str, object]]:
+    """Register declared components and start each one as its own process."""
+    declared = manifest.get("components")
+    if not isinstance(declared, list) or not declared:
+        return []
+    inventory: list[dict[str, object]] = []
+    try:
+        COMPONENT_LOG.write_text("", encoding="utf-8")
+    except OSError:
+        pass
+    for component in declared:
+        path = install_dir / str(component["file"])
+        argv = [sys.executable, "-u", str(path), *[str(argument) for argument in component["args"]]]
+        command = f"{shlex.join(argv)} </dev/null >>{shlex.quote(str(COMPONENT_LOG))} 2>&1 & echo $!"
+        output = topology.host_command("victim", ["/bin/sh", "-c", command])
+        pid = next((line.strip() for line in reversed(output.splitlines()) if line.strip().isdigit()), "")
+        status = "running" if pid else "failed"
+        inventory.append({
+            "name": str(component["name"]),
+            "file": str(component["file"]),
+            "sha256": str(component["sha256"]),
+            "args": list(component["args"]),
+            "path": str(path),
+            "pid": pid or None,
+            "status": status,
+            "started_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        })
+    _write_json(COMPONENT_INVENTORY, {"version": version, "components": inventory})
+    return inventory
 
 
 def _install_release(
@@ -220,13 +339,32 @@ def _install_release(
         if record_history:
             append_history("Package checksum and signature verified.")
         with zipfile.ZipFile(BytesIO(artifact_path.read_bytes())) as package:
-            if package.namelist() != ["manifest.json"]:
+            names = package.namelist()
+            if "manifest.json" not in names or not all(re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", name) for name in names):
                 raise RuntimeError("Package contents do not match the Orion release format.")
             info = package.getinfo("manifest.json")
             if info.file_size > 16 * 1024:
                 raise RuntimeError("Release manifest exceeds the allowed size.")
             manifest = _validate_manifest(json.loads(package.read(info)), version)
+            declared = [str(component["file"]) for component in manifest.get("components", [])]
+            if set(names) != set(declared) | {"manifest.json"} or len(names) != len(declared) + 1:
+                raise RuntimeError("Package contents do not match the declared components.")
+            payloads: dict[str, bytes] = {}
+            for component in manifest.get("components", []):
+                data = package.read(str(component["file"]))
+                if len(data) > MAX_COMPONENT_BYTES:
+                    raise RuntimeError("A package component exceeds the allowed size.")
+                if hashlib.sha256(data).hexdigest() != component["sha256"]:
+                    raise RuntimeError("A package component does not match the digest in the manifest.")
+                payloads[str(component["file"])] = data
         _set_update_status("installing", f"Installing {version.upper()} package", version, 90)
+        _stop_components()
+        install_dir = COMPONENT_ROOT / version
+        shutil.rmtree(install_dir, ignore_errors=True)
+        install_dir.mkdir(parents=True, exist_ok=True)
+        (install_dir / "manifest.json").write_text(json.dumps(manifest, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+        for filename, data in payloads.items():
+            (install_dir / filename).write_bytes(data)
         installed_package = WORK_DIR / "installed-package.zip"
         installed_manifest_path = WORK_DIR / "installed.json"
         os.replace(artifact_path, installed_package)
@@ -235,7 +373,6 @@ def _install_release(
             state.current_version = version
             state.installed_manifest = manifest
             state.install_generation += 1
-            generation = state.install_generation
             state.last_callback = "No V3 check-in yet"
             state.update_status = {
                 "state": "installed",
@@ -246,11 +383,19 @@ def _install_release(
             }
         if record_history:
             append_history(f"Installed Orion Network Manager {version.upper()}.")
-        if version == "v3" and manifest["exercise"]["diagnostic_checkin"] is True and schedule_callback:
-            with state.state_lock:
-                state.last_callback = "Scheduled after short demo delay"
-            threading.Thread(target=run_beacon, args=(generation,), daemon=True).start()
-        return {"version": version, "sha256": digest}
+        inventory = []
+        if version == "v3" and schedule_callback:
+            inventory = _start_components(version, manifest, install_dir)
+            if inventory and record_history:
+                append_history(
+                    "Installer registered " + ", ".join(str(item["name"]) for item in inventory) + " from the signed build."
+                )
+        if not inventory:
+            try:
+                COMPONENT_INVENTORY.unlink()
+            except FileNotFoundError:
+                pass
+        return {"version": version, "sha256": digest, "components": inventory}
 
 
 def _write_manifest_temp(manifest: dict[str, object]) -> Path:
@@ -326,9 +471,23 @@ def install_available_update() -> str:
 def start_update_monitor() -> None:
     global monitor_thread
     MONITOR_STOP.clear()
+    try:
+        QUERY_LOG.write_text("", encoding="utf-8")
+    except OSError:
+        pass
 
     def monitor() -> None:
         while not MONITOR_STOP.is_set():
+            if topology.isolation.get("active"):
+                with state.state_lock:
+                    current = state.update_status.get("state")
+                if current != "unreachable":
+                    _set_update_status(
+                        "unreachable",
+                        "Update service unreachable: the tap is dropping the victim's traffic",
+                    )
+                MONITOR_STOP.wait(UPDATE_POLL_SECONDS)
+                continue
             try:
                 with lab_io_lock:
                     _channel_check()
@@ -346,75 +505,54 @@ def select_version(version: str) -> str:
 
 
 def target_description(version: str) -> str:
-    return {"v1": "baseline dashboard", "v2": "theme and topology update", "v3": "exercise build"}[version]
+    return {"v1": "baseline dashboard", "v2": "theme and topology update", "v3": "service health update"}[version]
 
 
-def _describe_checkin(result: dict[str, object]) -> str:
-    mode = str(result.get("mode", "unknown"))
-    if mode == "selected":
-        task_result = result.get("task_result")
-        if isinstance(task_result, dict):
-            hostname = task_result.get("hostname", "unknown")
-            command = task_result.get("command", "?")
-            exit_code = task_result.get("exit_code")
-            return f"Command result received from {hostname} ({command}, exit {exit_code})."
-        if "http_request" not in result:
-            if result.get("stage") == "handoff DNS lookup":
-                return f"Active: handoff DNS lookup failed; no HTTP request was sent ({result.get('error', 'invalid response')})."
-            if result.get("stage") == "receiver DNS lookup":
-                return f"Active: receiver DNS lookup failed; no HTTP request was sent ({result.get('error', 'invalid response')})."
-            if "handoff_query" not in result:
-                return "Active: handoff DNS query did not complete; no HTTP request was sent."
-            if result.get("handoff_rcode") != 0 or not result.get("handoff_answer"):
-                return "Active: handoff DNS lookup failed; no HTTP request was sent."
-            if result.get("receiver_rcode") != 0 or not result.get("receiver_query"):
-                return "Active: receiver DNS lookup failed; no HTTP request was sent."
-            return "Active: DNS handoff completed, but no HTTP request was sent."
-        identity = result.get("identity")
-        if result.get("http_status") == 200 and isinstance(identity, dict):
-            return f"Beacon checked in from {identity.get('hostname', 'unknown')} ({identity.get('ip', 'unknown')})."
-        if result.get("http_status") == 200:
-            return "Active: HTTP check-in accepted (200)."
-        if result.get("http_status") is not None:
-            return f"Active: local HTTP receiver returned status {result['http_status']}."
-        return f"Active: HTTP connection attempt failed before a response ({result.get('http_error', 'no response')})."
-    if mode == "passive":
-        return "Passive: DNS check-in received no follow-on instruction."
-    if mode == "disabled":
-        return "Disabled: local DNS coordinator returned NXDOMAIN."
-    if mode == "error":
-        return f"Check-in failed during {result.get('stage', 'an unknown stage')}: {result.get('error', 'unknown error')}"
-    return f"Check-in failed or returned an unexpected result: {result}"
-
-
-def run_beacon(generation: int) -> None:
-    time.sleep(DEMO_DELAY_SECONDS)
-    while True:
-        with state.state_lock:
-            if generation != state.install_generation or state.current_version != "v3":
-                return
+def _recent_queries(limit: int = 12) -> list[dict[str, object]]:
+    """Newest decoded check-in queries, straight from the coordinator log."""
+    try:
+        lines = QUERY_LOG.read_text(encoding="utf-8", errors="replace").splitlines()[-400:]
+    except OSError:
+        return []
+    entries: list[dict[str, object]] = []
+    for line in lines:
         try:
-            output = topology.host_command(
-                "victim",
-                [sys.executable, "/app/services.py", "checkin", config.DNS_IP, "demo-01", "v3"],
-            )
-            result = json.loads(output.strip().splitlines()[-1])
-            if not isinstance(result, dict):
-                raise ValueError("check-in returned invalid JSON")
-        except Exception as exc:
-            result = {"mode": "error", "stage": "check-in service", "error": str(exc)}
-        message = _describe_checkin(result)
-        with state.state_lock:
-            if generation != state.install_generation or state.current_version != "v3":
-                return
-            state.last_callback = message
-        if str(result.get("mode", "")) == "disabled":
-            return
-        time.sleep(BEACON_INTERVAL_SECONDS)
+            entry = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(entry, dict) or entry.get("kind") != "checkin":
+            continue
+        entry["fields"] = [[str(name), str(value)] for name, value in dga.explain(entry)]
+        entries.append(entry)
+    return entries[-limit:][::-1]
+
+
+def _derive_callback(queries: list[dict[str, object]], beacons: list[dict[str, object]]) -> str:
+    """Summarise the newest receiver or coordinator evidence for the console."""
+    if queries:
+        newest = queries[0]
+        if newest.get("decode_ok") is False:
+            return f"Encoded check-in rejected by the coordinator ({newest.get('error', 'invalid label')})."
+        mode = newest.get("mode")
+        answer = str(newest.get("answer") or "")
+        if mode == dga.MODE_DISABLED or newest.get("rcode") == 3:
+            return "Disabled: coordinator returned NXDOMAIN; the implant sent its final check-in and exited."
+        if answer == config.MODE_IPS["selected"]:
+            if beacons:
+                beacon = beacons[0]
+                return f"Beacon checked in from {beacon.get('hostname', 'unknown')} ({beacon.get('ip', 'unknown')})."
+            return "Active: activation address returned; waiting for the HTTP check-in."
+        if answer == config.MODE_IPS["passive"]:
+            return f"Passive: DNS check-in from {newest.get('hostname', 'unknown')} received no follow-on instruction."
+    if beacons:
+        beacon = beacons[0]
+        return f"Beacon checked in from {beacon.get('hostname', 'unknown')} ({beacon.get('ip', 'unknown')})."
+    return "No V3 check-in yet"
 
 
 def reset_demo() -> str:
     with lab_io_lock:
+        _clear_components()
         install_version("v2", "Presenter reset client", schedule_callback=False, record_history=False)
         write_mode("passive")
         topology.stop_capture()
@@ -422,7 +560,7 @@ def reset_demo() -> str:
             state.PCAP_PATH.unlink()
         except FileNotFoundError:
             pass
-        for path in (UPDATE_LOG, DNS_LOG, RECEIVER_LOG, RESULT_LOG):
+        for path in (UPDATE_LOG, DNS_LOG, RECEIVER_LOG, RESULT_LOG, QUERY_LOG):
             path.write_text("", encoding="utf-8")
         for path in (state.TASK_PATH, BEACONS_PATH, RESULTS_PATH):
             try:
@@ -431,7 +569,7 @@ def reset_demo() -> str:
                 pass
         with state.state_lock:
             state.update_history.clear()
-            state.last_callback = "No beacon yet"
+            state.last_callback = "No V3 check-in yet"
             state.update_status = {
                 "state": "up-to-date",
                 "message": "V2 is current",
@@ -451,6 +589,7 @@ def client_state() -> dict[str, object]:
         return {
             "version": state.current_version,
             "manifest": json.loads(json.dumps(state.installed_manifest)),
+            "components": (_read_json(COMPONENT_INVENTORY) or {}).get("components", []),
             "update": dict(state.update_status),
             "history": list(state.update_history[-20:]),
         }
@@ -459,8 +598,13 @@ def client_state() -> dict[str, object]:
 def attacker_state() -> dict[str, object]:
     with state.state_lock:
         mode = state.coordinator_mode
-        callback = state.last_callback
     beacons = _read_json(BEACONS_PATH) or {}
+    beacon_list = sorted(
+        (item for item in beacons.values() if isinstance(item, dict)),
+        key=lambda item: str(item.get("last_seen", "")),
+        reverse=True,
+    )
+    queries = _recent_queries()
     timeline = read_timeline((
         ("DNS coordinator", DNS_LOG),
         ("HTTP receiver", RECEIVER_LOG),
@@ -468,12 +612,9 @@ def attacker_state() -> dict[str, object]:
     ))
     return {
         "mode": mode,
-        "last_callback": callback,
-        "beacons": sorted(
-            (item for item in beacons.values() if isinstance(item, dict)),
-            key=lambda item: str(item.get("last_seen", "")),
-            reverse=True,
-        ),
+        "last_callback": _derive_callback(queries, beacon_list),
+        "beacons": beacon_list,
+        "queries": queries,
         "pending_task": _read_json(state.TASK_PATH),
         "results": _read_json_list(RESULTS_PATH),
         "timeline": timeline,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,6 +21,9 @@ RESULTS_PATH = WORK_DIR / "results.json"
 RESULT_LOG = WORK_DIR / "result.log"
 PCAP_PATH = CAPTURE_DIR / "c2-traffic.pcap"
 CAPTURE_ERROR_PATH = CAPTURE_DIR / "capture.stderr.log"
+SENSOR_DIR = WORK_DIR / "sensor"
+SENSOR_STATE_PATH = SENSOR_DIR / "state.json"
+SENSOR_ERROR_PATH = SENSOR_DIR / "sensor.stderr.log"
 
 state_lock = threading.RLock()
 lab_io_lock = threading.RLock()
@@ -28,6 +32,8 @@ installed_manifest: dict[str, object] = {}
 coordinator_mode = "passive"
 install_generation = 0
 last_callback = "No V3 check-in yet"
+dns_block_active = False
+dns_block_previous_mode = "passive"
 update_status: dict[str, object] = {
     "state": "starting",
     "message": "Update service is starting",
@@ -64,3 +70,20 @@ def read_timeline(sources: tuple[tuple[str, Path], ...], limit_per_source: int =
             sequence += 1
     entries.sort(key=lambda item: (item[0], item[1]))
     return [entry for _timestamp, _sequence, entry in entries[-100:]]
+
+
+def read_sensor_state() -> dict[str, object]:
+    """Return the sensor's last published snapshot, or an empty snapshot."""
+    try:
+        value = json.loads(SENSOR_STATE_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def clear_response_state() -> None:
+    """Drop defender response flags; the tap restart on reset calls this."""
+    global dns_block_active, dns_block_previous_mode
+    with state_lock:
+        dns_block_active = False
+        dns_block_previous_mode = "passive"

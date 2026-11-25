@@ -1,5 +1,6 @@
 let pendingModeEdit = false;
 let lastServerMode = null;
+let dgaSelection = 0;
 const modeSelect = document.getElementById('mode');
 modeSelect.addEventListener('change', () => { pendingModeEdit = true; });
 
@@ -57,6 +58,41 @@ function renderPending(task) {
     : 'No command in flight';
 }
 
+function renderQueries(queries) {
+  const body = document.getElementById('dga-queries');
+  const count = document.getElementById('dga-count');
+  count.textContent = `${queries.length} ${queries.length === 1 ? 'QUERY' : 'QUERIES'}`;
+  if (!queries.length) {
+    body.innerHTML = '<tr><td colspan="6">No encoded check-ins yet.</td></tr>';
+    renderBreakdown(null);
+    return;
+  }
+  if (dgaSelection >= queries.length) dgaSelection = 0;
+  body.innerHTML = queries.map((query, index) => {
+    const rejected = query.decode_ok === false;
+    const flagged = rejected && query.looks_encoded;
+    const host = rejected ? (flagged ? 'checksum failed' : 'rejected') : escapeHtml(query.hostname || '');
+    const mode = rejected ? '?' : `${query.mode} ${escapeHtml(query.mode_name || '')}`;
+    const uid = rejected ? '-' : escapeHtml(query.uid || '');
+    const coordinator = escapeHtml(String(query.coordinator_mode || '').toUpperCase());
+    return `<tr data-index="${index}" class="${flagged ? 'flagged ' : ''}${index === dgaSelection ? 'selected' : ''}">
+      <td>${escapeHtml(query.time || '')}</td>
+      <td>${flagged ? '<span class="badge">BAD CRC</span> ' : ''}${host}</td>
+      <td>${rejected ? '-' : escapeHtml(query.username || '')}</td>
+      <td>${uid}</td>
+      <td>${mode}</td>
+      <td>${coordinator}</td>
+    </tr>`;
+  }).join('');
+  renderBreakdown(queries[dgaSelection]);
+}
+
+function renderBreakdown(query) {
+  document.getElementById('dga-breakdown').textContent = query
+    ? (query.fields || []).map(([name, value]) => `${name}=${value}`).join('  ')
+    : 'No query selected.';
+}
+
 function renderResults(results) {
   const items = results.slice().reverse();
   document.getElementById('results').textContent = items.length
@@ -83,6 +119,7 @@ async function refresh() {
     }
     lastServerMode = state.mode;
     renderBeacons(state.beacons || []);
+    renderQueries(state.queries || []);
     renderPending(state.pending_task);
     renderResults(state.results || []);
     const infra = state.infrastructure || {};
@@ -137,6 +174,12 @@ document.getElementById('send-task').addEventListener('click', async () => {
 });
 document.getElementById('task-command').addEventListener('keydown', event => {
   if (event.key === 'Enter') document.getElementById('send-task').click();
+});
+document.getElementById('dga-queries').addEventListener('click', event => {
+  const row = event.target.closest('tr[data-index]');
+  if (!row) return;
+  dgaSelection = Number(row.dataset.index);
+  refresh();
 });
 refresh();
 setInterval(refresh, 1500);

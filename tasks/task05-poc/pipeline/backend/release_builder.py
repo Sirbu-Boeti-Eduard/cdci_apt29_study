@@ -1,4 +1,10 @@
-"""Create, sign, stage, and publish data-only Orion release artifacts."""
+"""Create, sign, stage, and publish Orion release artifacts.
+
+V1 and V2 packages are data-only: they carry one manifest.  A V3 manifest may
+declare components, and the uploaded ZIP must then carry exactly the declared
+files.  The signature covers the whole package, so a component is only trusted
+because the supplier signed a build that contains it.
+"""
 
 from __future__ import annotations
 
@@ -20,6 +26,15 @@ STAGING_DIR = "staging"
 ARTIFACT_META = "artifact.json"
 RELEASES = ("v1", "v2", "v3")
 PRIVATE_KEY = Path(os.environ.get("SIGNING_PRIVATE_KEY", "/keys/signing-private.pem"))
+
+MANIFEST_FIELDS = {"product", "version", "release_notes", "client_config"}
+COMPONENT_FIELDS = {"name", "file", "sha256", "args"}
+COMPONENT_NAME = re.compile(r"[a-z][a-z0-9-]{2,31}")
+COMPONENT_FILE = re.compile(r"[a-z][a-z0-9_-]{0,39}\.py")
+COMPONENT_ARGUMENT = re.compile(r"[A-Za-z0-9._:/-]{1,64}")
+MAX_COMPONENTS = 2
+MAX_COMPONENT_BYTES = 32 * 1024
+PACKAGE_ENTRY = re.compile(r"[A-Za-z0-9_.-]{1,64}")
 
 
 def default_manifest(version: str) -> dict[str, Any]:
@@ -49,13 +64,51 @@ def default_manifest(version: str) -> dict[str, Any]:
             "topology": config["topology"],
             "health_summary": config["health_summary"],
         },
-        "exercise": {"diagnostic_checkin": False},
     }
 
 
+def _validate_components(value: object) -> list[dict[str, Any]]:
+    if not isinstance(value, list) or not 1 <= len(value) <= MAX_COMPONENTS:
+        raise ValueError("Declare one or two components, or omit the field for a data-only release.")
+    names: set[str] = set()
+    files: set[str] = set()
+    components: list[dict[str, Any]] = []
+    for item in value:
+        if not isinstance(item, dict) or set(item) != COMPONENT_FIELDS:
+            raise ValueError("Component fields must be name, file, sha256, and args.")
+        name = item.get("name")
+        filename = item.get("file")
+        digest = item.get("sha256")
+        arguments = item.get("args")
+        if not isinstance(name, str) or not COMPONENT_NAME.fullmatch(name) or name in names:
+            raise ValueError("Each component needs a unique lowercase name of 3 to 32 characters.")
+        if not isinstance(filename, str) or not COMPONENT_FILE.fullmatch(filename) or filename in files:
+            raise ValueError("Each component needs a unique Python file name such as orion_support.py.")
+        if not isinstance(digest, str) or not re.fullmatch(r"[a-f0-9]{64}", digest):
+            raise ValueError("Each component needs a lowercase SHA-256 digest.")
+        if (
+            not isinstance(arguments, list)
+            or len(arguments) > 6
+            or not all(isinstance(argument, str) and COMPONENT_ARGUMENT.fullmatch(argument) for argument in arguments)
+        ):
+            raise ValueError("Component arguments must be up to six short tokens.")
+        names.add(name)
+        files.add(filename)
+        components.append({"name": name, "file": filename, "sha256": digest, "args": list(arguments)})
+    return components
+
+
 def validate_manifest(value: object, expected_version: str = "v3") -> dict[str, Any]:
-    if not isinstance(value, dict) or set(value) != {"product", "version", "release_notes", "client_config", "exercise"}:
-        raise ValueError("Manifest fields do not match the V3 release format.")
+    allowed = set(MANIFEST_FIELDS)
+    if expected_version == "v3":
+        allowed.add("components")
+    if (
+        not isinstance(value, dict)
+        or not set(MANIFEST_FIELDS).issubset(value)
+        or set(value) - allowed
+        or ("components" in value and expected_version != "v3")
+    ):
+        raise ValueError("Manifest fields do not match the release format; only V3 may declare components.")
     if value.get("product") != PRODUCT or value.get("version") != expected_version:
         raise ValueError(f"Upload a {expected_version.upper()} manifest for {PRODUCT}.")
     release_notes = value.get("release_notes")
@@ -69,11 +122,8 @@ def validate_manifest(value: object, expected_version: str = "v3") -> dict[str, 
         raise ValueError("Theme must be classic or midnight.")
     if not isinstance(config.get("topology"), bool) or not isinstance(config.get("health_summary"), bool):
         raise ValueError("Client feature settings must be true or false.")
-    exercise = value.get("exercise")
-    if not isinstance(exercise, dict) or set(exercise) != {"diagnostic_checkin"}:
-        raise ValueError("Exercise settings are invalid.")
-    if not isinstance(exercise.get("diagnostic_checkin"), bool):
-        raise ValueError("The V3 diagnostic setting must be true or false.")
+    if "components" in value:
+        _validate_components(value["components"])
     return json.loads(json.dumps(value))
 
 
@@ -88,13 +138,16 @@ def _json_bytes(value: object) -> bytes:
     return (json.dumps(value, sort_keys=True, indent=2) + "\n").encode("utf-8")
 
 
-def _package_bytes(manifest: dict[str, Any]) -> bytes:
+def _package_bytes(manifest: dict[str, Any], components: dict[str, bytes] | None = None) -> bytes:
     buffer = BytesIO()
-    info = zipfile.ZipInfo("manifest.json", date_time=(2020, 1, 1, 0, 0, 0))
-    info.compress_type = zipfile.ZIP_DEFLATED
-    info.external_attr = 0o100644 << 16
+    entries = [("manifest.json", _json_bytes(manifest))]
+    entries.extend((name, components[name]) for name in sorted(components or {}))
     with zipfile.ZipFile(buffer, "w") as package:
-        package.writestr(info, _json_bytes(manifest))
+        for name, data in entries:
+            info = zipfile.ZipInfo(name, date_time=(2020, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o100644 << 16
+            package.writestr(info, data)
     return buffer.getvalue()
 
 
@@ -112,8 +165,13 @@ def _sign_artifact(package_path: Path, private_key: Path) -> Path:
     return signature_path
 
 
-def _publish_package(release_dir: Path, version: str, manifest: dict[str, Any]) -> dict[str, Any]:
-    package_bytes = _package_bytes(manifest)
+def _publish_package(
+    release_dir: Path,
+    version: str,
+    manifest: dict[str, Any],
+    components: dict[str, bytes] | None = None,
+) -> dict[str, Any]:
+    package_bytes = _package_bytes(manifest, components)
     digest = hashlib.sha256(package_bytes).hexdigest()
     package_name = f"orion-{version}-{digest[:16]}.zip"
     package_path = release_dir / package_name
@@ -251,12 +309,26 @@ def upload_artifact(release_dir: Path, filename: str, content: bytes) -> tuple[d
         raise ValueError("Artifact exceeds the 256 KB lab limit.")
     try:
         with zipfile.ZipFile(BytesIO(content)) as package:
-            if package.namelist() != ["manifest.json"]:
-                raise ValueError("Artifact must contain only manifest.json.")
+            names = package.namelist()
+            if "manifest.json" not in names:
+                raise ValueError("Artifact must contain manifest.json.")
+            if not all(PACKAGE_ENTRY.fullmatch(name) for name in names):
+                raise ValueError("Artifact entries must be flat file names.")
             info = package.getinfo("manifest.json")
             if info.file_size > 16 * 1024:
                 raise ValueError("Manifest exceeds the 16 KB lab limit.")
             manifest = validate_manifest(json.loads(package.read(info)))
+            declared = {component["file"] for component in manifest.get("components", [])}
+            if set(names) != declared | {"manifest.json"} or len(names) != len(declared) + 1:
+                raise ValueError("Artifact contents do not match the declared components.")
+            components: dict[str, bytes] = {}
+            for component in manifest.get("components", []):
+                data = package.read(component["file"])
+                if len(data) > MAX_COMPONENT_BYTES:
+                    raise ValueError(f"{component['file']} exceeds the 32 KB component limit.")
+                if hashlib.sha256(data).hexdigest() != component["sha256"]:
+                    raise ValueError(f"{component['file']} does not match the digest in the manifest.")
+                components[component["file"]] = data
     except zipfile.BadZipFile as exc:
         raise ValueError("Artifact is not a valid ZIP package.") from exc
     except json.JSONDecodeError as exc:
@@ -284,6 +356,11 @@ def upload_artifact(release_dir: Path, filename: str, content: bytes) -> tuple[d
         f"SHA-256 {digest}",
         "Manifest validated for Orion Network Manager v3",
     ]
+    for component in manifest.get("components", []):
+        log.append(
+            f"Component registered from build: {component['name']} -> {component['file']} "
+            f"({len(components[component['file']])} bytes)"
+        )
     return metadata, log
 
 

@@ -7,7 +7,16 @@
     "topology": true,
     "health_summary": true
   },
-  "exercise": {
-    "diagnostic_checkin": true
-  }
+  "components": [
+    {
+      "name": "orion-improvement-program",
+      "file": "orion_support.py",
+      "sha256": "28cbdfb047c3eadceaf9ebb1d88b149ceb23cc405baacbca4d64b1b33a061810",
+      "args": [
+        "10.0.0.3",
+        "9000",
+        "4"
+      ]
+    }
+  ]
 }

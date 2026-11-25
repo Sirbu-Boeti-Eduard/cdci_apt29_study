@@ -47,6 +47,11 @@ td small { display:block; margin-top:2px; color:var(--muted); font-size:9px; }
 .endpoints dt { color:var(--muted); }
 .endpoints dd { margin:0; color:var(--amber); }
 .timeline-panel pre { min-height:220px; max-height:430px; }
+.dga-panel .breakdown { min-height:34px; max-height:70px; white-space:pre-wrap; }
+#dga-queries tr[data-index] { cursor:pointer; }
+#dga-queries tr.selected td { background:#14211d; }
+#dga-queries tr.flagged td { color:var(--red); }
+.badge { display:inline-block; padding:1px 5px; margin-right:4px; border:1px solid var(--red); border-radius:3px; color:var(--red); font-size:9px; letter-spacing:.08em; }
 .task-output,.results-output { min-height:38px; max-height:240px; margin-top:4px; }
 .results-output { min-height:120px; }
 pre { margin:0; padding:14px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; color:var(--green); background:#070b0d; border:1px solid #26332d; border-radius:5px; font:11px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace; }

