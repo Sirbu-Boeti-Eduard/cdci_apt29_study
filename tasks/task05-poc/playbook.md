@@ -166,7 +166,7 @@ The private key is read-only in the supplier container; the trust volume holds o
 
 The real Orion build was not breached through the source repository. SUNSPOT ran inside the build environment, replaced one source file in the build workspace while the compiler ran, and restored the original afterwards. The repository stayed clean; the compromised DLL shipped inside a signed update; the code-signing certificate made the result trusted. [CrowdStrike SUNSPOT analysis](https://www.crowdstrike.com/en-us/blog/sunspot-malware-technical-analysis/) [SolarWinds update](https://www.sec.gov/Archives/edgar/data/1739942/000173994221000076/swi-20210507.htm)
 
-The lab uses a related build-time failure: dependency confusion. The real incident was SUNSPOT, not dependency confusion; the property is the same, a build that trusts something the source repository does not control. `pipeline/src/orion_support.py` is the approved source: it collects identity and posts health telemetry. The build resolves `orion-compat` by asking its internal index (`1.4.2`) and the public index, and choosing the highest version. The hacker publishes `2.0.0` to the public index, so the build downloads that package and runs its install hook; the hook replaces `orion_support.py` with the component the package ships. The manifest is generated after the hook, so it pins the injected file; the RSA signature covers the package; the client's catalog digest, signature, and component digest all pass.
+The lab uses a related build-time failure: dependency confusion. The real incident was SUNSPOT, not dependency confusion; the property is the same, a build that trusts something the source repository does not control. `pipeline/src/orion_support.py` is the approved source: it writes a local health snapshot and has no network behavior. The build resolves `orion-compat` by asking its internal index (`1.4.2`) and the public index, and choosing the highest version. The hacker publishes `2.0.0` to the public index, so the build downloads that package and runs its install hook; the hook replaces `orion_support.py` with the component the package ships. The manifest is generated after the hook, so it pins the injected file; the RSA signature covers the package; the client's catalog digest, signature, and component digest all pass.
 
 The value is the trust boundary, not the payload. The attacker needs no client vulnerability, no phishing, and no credentials at the victim. One public package with a higher version reaches every customer who trusts the vendor's update channel, and the signature check that is meant to stop tampering is the control that makes the package acceptable. That is why the build step, not the implant, is the vulnerability.
 
@@ -177,7 +177,7 @@ Four controls would change the outcome:
 - a signed provenance attestation that binds the source revision to the output digest;
 - a signing policy that refuses an artifact whose build inputs are not pinned.
 
-The lab shows the effect conceptually: the build log says the public `2.0.0` won, the source component hash (`8f68…`) and the artifact component hash (`28cb…`) differ, and the difference is one install hook. It does not implement the controls.
+The lab shows the effect conceptually: the build log says the public `2.0.0` won, the source component hash (`55f8…`) and the artifact component hash (`28cb…`) differ, and the difference is one install hook. It does not implement the controls.
 
 ## Inline sensor and tap
 
