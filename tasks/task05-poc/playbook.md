@@ -8,7 +8,7 @@ Presenters: the timed run of show, the speaking lines, and the failure recoverie
 
 | Beat | Open | What appears | Claim it supports |
 | --- | --- | --- | --- |
-| Build | Build & Release | The release pipeline runs checkout, build, manifest, package, sign, and publish; a build step changes one file, and the manifest is generated afterwards and pins it. | A signed release can contain code the source never had. |
+| Build | Build & Release | The release pipeline runs checkout, build, manifest, package, sign, and publish; a build step changes one file, and the manifest is generated afterwards and pins it. The supply-chain panel shows the approved source, the `service-compat` step, and the signed artifact side by side. | A signed release can contain code the source never had. |
 | Delivery | Build & Release, then Orion Network Manager | A V3 package signed with the supplier key reaches the client through the normal channel; the client checks the catalog digest, the RSA signature, and the component digest, then installs. | A signed update can carry malicious code without breaking the normal trust path. |
 | Introduction of the implant | Orion Network Manager history and installed components | The installer registers `orion-improvement-program` from the signed package and starts one process. V1 and V2 start nothing. | The backdoor arrives with the build, not with the platform. |
 | Dormant check-in | Operator Console, Encoded check-ins | Labels built from the host name and user; mode byte 4, then 5 once the coordinator returns the activation address. | The victim identifier is encoded, and the coordinator decides what happens next. |
@@ -136,7 +136,7 @@ sequenceDiagram
 
 | Application | Address | Role |
 | --- | --- | --- |
-| **Build & Release** | `http://localhost:8080` | Run the release pipeline (checkout, build, manifest, package, sign, publish) and inspect its stages; shows the catalog and pipeline output. |
+| **Build & Release** | `http://localhost:8080` | Run the release pipeline (checkout, build, manifest, package, sign, publish) and inspect its stages; shows the supply-chain impact panel, the catalog, and pipeline output. |
 | **Orion Network Manager** | `http://localhost:8081` | Client update agent, version, and normal update history. |
 | **Operator Console** | `http://localhost:8082` | Beacons, typed commands, and the C2 capture. |
 | **Presentation Dashboard** | `http://localhost:8083` | Reset button, the seven-phase attack-story ribbon, and running services. |
@@ -156,9 +156,26 @@ The DNS and HTTP stage follows Mandiant's description of SUNBURST. Each check-in
 
 The check-in name is decodable by design. The record holds a version byte, the mode byte, a four-byte victim uid, length-prefixed hostname and username, and a CRC-16 checksum. The implant XORs the record with a fixed keystream derived from one constant string and base32-encodes it without padding, all in `pipeline/payload/orion_support.py`. A fixed key and a standard encoding mean a capture can be decoded offline, the same property that made SUNBURST's own check-in names recoverable. `lab/dga.py` documents the field layout. Its `python3 lab/dga.py` mode compares the coordinator's encoder with the implant's copy on 200 random identities and exits non-zero on any difference.
 
-The HTTP stage is shaped like the update agent's own telemetry. Every upload goes to one endpoint, `/swip/upd/orion.improvementprogram.asmx`, with the vendor's `Orion/2020.2.4` user agent and a body of Improvement Program fields: `customerId`, `machineName`, `userName`, `osVersion`, `ipAddress`, `processId`. Tasking comes back inside the same envelope under `swip.tasks`, and a finished task is another upload whose `telemetry` block carries the exit code and output. Nothing in the request names a command or a check-in. That is the point: on the wire it reads as routine telemetry, and the giveaways are that the destination is a bare private address and that the agent string claims a Windows Orion client while the host runs Linux.
+The HTTP stage is shaped like the update agent's own telemetry. Every upload goes to one endpoint, `/swip/upd/orion.improvementprogram.asmx`, with the vendor's `Orion/2020.2.4` user agent and a body of Improvement Program fields: `customerId`, `machineName`, `userName`, `osVersion`, `ipAddress`, `processId`. Tasking comes back inside the same envelope under `swip.tasks`, and a finished task is another upload whose `telemetry` block carries the exit code and output. Nothing in the request names a command or a check-in. That is the point: on the wire it reads as routine telemetry, and the giveaways are that the destination is a bare private address and that the agent string claims a Windows Orion client while the host runs Linux. A `collect` command expands to `base64 -w0` on the decoy `customers.csv`; the base64 result rides back in the same `telemetry` block, which is why a health check and a data theft look alike until the size gives it away.
 
 The private key is read-only in the supplier container; the trust volume holds only the public key.
+
+## How the build was exploited
+
+The real Orion build was not breached through the source repository. SUNSPOT ran inside the build environment, replaced one source file in the build workspace while the compiler ran, and restored the original afterwards. The repository stayed clean; the compromised DLL shipped inside a signed update; the code-signing certificate made the result trusted. [CrowdStrike SUNSPOT analysis](https://www.crowdstrike.com/en-us/blog/sunspot-malware-technical-analysis/) [SolarWinds update](https://www.sec.gov/Archives/edgar/data/1739942/000173994221000076/swi-20210507.htm)
+
+The lab maps that to one step. `pipeline/src/orion_support.py` is the approved source: it collects identity and posts health telemetry. `pipeline/build/build_release.py` copies the source into a workspace and runs `service-compat`; that step replaces `orion_support.py` with `pipeline/payload/orion_support.py`. The manifest is generated after the step, so it pins the injected file; the RSA signature covers the package; the client's catalog digest, signature, and component digest all pass.
+
+The value is the trust boundary, not the payload. The attacker needs no client vulnerability, no phishing, and no credentials at the victim. One changed file in the build reaches every customer who trusts the vendor's update channel, and the signature check that is meant to stop tampering is the control that makes the package acceptable. That is why the build step, not the implant, is the vulnerability.
+
+Four controls would change the outcome:
+
+- a reproducible build that rebuilds from the tagged source and compares the artifact;
+- a signed provenance attestation that binds the source revision to the output digest;
+- a signing policy that refuses an artifact whose provenance does not match the approved source;
+- build isolation that stops a build step from modifying the workspace.
+
+The lab shows the first one conceptually: the source component hash (`8f68…`) and the artifact component hash (`28cb…`) differ, and the difference is one build step. It does not implement the other three.
 
 ## Inline sensor and tap
 
@@ -174,11 +191,11 @@ That includes the V3 download on port 8000. The flow table keeps it because deli
 
 ### Why a Python detector and not Suricata
 
-Suricata 7.0.3 installs from the Ubuntu 24.04 archive, and its build information lists PCAP and AF_PACKET support. It was not run on the bridge: the rule-language problem decided the choice. Three of the seven rules need state the Suricata rule language does not carry: a base32 decode with a CRC-16 check, interval statistics over successive queries, and reuse of one decoded label across sources. Those would be Lua scripts next to a YAML config, and the checksum rule would duplicate a decoder the lab already ships in `lab/dga.py`, which is also the contract with the implant. One Python process over the same pcap keeps every rule auditable and keeps the alert and its packet excerpt in one place. The tradeoff is that the lab gets no community rule feed and no protocol parsers beyond the ones it needs. Suricata would be the better base for a production sensor that also wants TLS metadata, file extraction, and a maintained ruleset.
+Suricata 7.0.3 installs from the Ubuntu 24.04 archive, and its build information lists PCAP and AF_PACKET support. It was not run on the bridge: the rule-language problem decided the choice. Three of the eight rules need state the Suricata rule language does not carry: a base32 decode with a CRC-16 check, interval statistics over successive queries, and reuse of one decoded label across sources. Those would be Lua scripts next to a YAML config, and the checksum rule would duplicate a decoder the lab already ships in `lab/dga.py`, which is also the contract with the implant. One Python process over the same pcap keeps every rule auditable and keeps the alert and its packet excerpt in one place. The tradeoff is that the lab gets no community rule feed and no protocol parsers beyond the ones it needs. Suricata would be the better base for a production sensor that also wants TLS metadata, file extraction, and a maintained ruleset.
 
 ### Rules
 
-All seven rules are computed from captured packets. An empty capture produces no alerts.
+All eight rules are computed from captured packets. An empty capture produces no alerts.
 
 | Rule | Computed from | Why it matters |
 | --- | --- | --- |
@@ -189,6 +206,7 @@ All seven rules are computed from captured packets. An empty capture produces no
 | `T5-BCN-001` | Intervals between check-in queries from one source: mean, spread, and coefficient of variation over at least three intervals. | The queries are a scheduled beacon, not user or browser timing. |
 | `T5-C2-001` | First packet in this capture from a source to a new destination address and port. | This host opened a conversation with an address nobody had used before. |
 | `T5-C2-002` | HTTP POST to an IP literal in a non-global range on an Improvement Program shaped path such as `/swip/upd/`, or carrying an `Orion/` user agent. | The endpoint never resolves to a public vendor host, yet the client posts updater-shaped data there. |
+| `T5-EXFIL-001` | HTTP POST to a bare IP whose `Content-Length` is above 4 KB on the telemetry path. | A result upload far larger than a health check is data leaving the host. |
 
 The beacon rule fires when the spread is at most 12 percent of the mean (or 0.3 seconds, whichever is larger) over three or more intervals with a mean of at least half a second. The lab beacons every 4 seconds, so it fires on the fourth query.
 
@@ -211,7 +229,7 @@ The Presentation Dashboard has only **Reset lab**. Reset the lab there, and use 
 3. **Run the pipeline.** In Build & Release choose **Stable · mandatory** and click **Run release pipeline**. The stage list fills in order: source checkout, build component, generate manifest, package artifact, sign artifact, publish catalog. The build step changes `orion_support.py`, and the manifest is generated afterwards and pins the changed digest. Signing and publishing are pipeline jobs, not separate buttons. V3 cannot be republished; reset before running the pipeline again.
 4. **Watch delivery.** On the next poll the client downloads the catalog, ZIP, and signature, checks the digest and RSA signature, extracts the package, verifies the component digest, and installs V3. Update history shows normal events only: found, downloaded, verified, installed, and one line naming the registered component.
 5. **Watch the beacon.** Three seconds after install the component reads the host name and user, builds the label, and queries `<label>.checkin.orion-lab.test`. In ACTIVE mode the coordinator returns the activation address; the component follows the CNAME handoff and posts its details as an Improvement Program upload. The console lists `orion-01`, user, OS, address, process, PID, and architecture, plus an `Encoded check-ins` table with the decoded host, user, uid, and mode byte. Click any row for the field breakdown. The same label appears in the DNS log and in the pcap. The component repeats the loop every four seconds until the coordinator returns NXDOMAIN or reset stops the process.
-6. **Send a command.** Choose **All beacons** or `orion-01` under **Target**, type `id` or `id; uname -a`, and click **SEND COMMAND**. On the next upload the receiver returns the task in `swip.tasks`, the component runs it with `/bin/sh -lc`, and the output and exit code return in a `telemetry` block and appear under **Command results**. A task queued in PASSIVE waits for an ACTIVE check-in.
+6. **Send a command.** Choose **All beacons** or `orion-01` under **Target**, type `id` or `id; uname -a`, and click **SEND COMMAND**. On the next upload the receiver returns the task in `swip.tasks`, the component runs it with `/bin/sh -lc`, and the output and exit code return in a `telemetry` block and appear under **Command results**. A task queued in PASSIVE waits for an ACTIVE check-in. For the data beat, type `collect customers.csv`; it expands to `base64 -w0` on the decoy sample file, and the large result upload fires `T5-EXFIL-001`.
 7. **Compare modes.** PASSIVE returns the passive address with no HTTP follow-on, so new beacons and tasks do not proceed, and the implant drops back to mode 4. DISABLED returns NXDOMAIN; the implant sends one final check-in at mode 3 and exits, so no further queries appear. To run the beacon again, reset the lab and publish V3 again. Reset returns the coordinator to PASSIVE.
 8. **Defender view.** Keep the Blue Team tab open through steps 1 to 6. Rows appear while the beacon runs; the walkthrough order is in the next section.
 9. **Respond.** From the Blue Team app, block the check-in suffix or isolate the victim at the tap, and watch the operator console go quiet. Both actions are reversible, and reset restores both.
@@ -229,7 +247,7 @@ Walk through it in this order. Events are newest first, so the story reads from 
 2. **First contact with the updater.** `T5-C2-001` from `10.0.0.5` to `10.0.0.2:8000`, when the update agent starts polling. The rule fires on an ordinary conversation too, which is what a first-contact rule does.
 3. **First contact with the coordinator.** `T5-C2-001` from `10.0.0.5` to `10.0.0.3:53`, within a second of the V3 install. Expand it for the packet excerpt.
 4. **Interval statistics.** After four queries the table shows the sample count, a mean near 4 seconds and a spread of a few hundredths. The matching `T5-BCN-001` row carries the numbers from the moment it fired.
-5. **Telemetry upload.** `T5-C2-002` for a `POST` to `/swip/upd/orion.improvementprogram.asmx` on `10.0.0.4:9000`, with `User-Agent: Orion/2020.2.4 (Windows NT 10.0; Win64; x64)`. The expanded row holds the request line, the agent string, and the resolver that supplied the address.
+5. **Telemetry upload.** `T5-C2-002` for a `POST` to `/swip/upd/orion.improvementprogram.asmx` on `10.0.0.4:9000`, with `User-Agent: Orion/2020.2.4 (Windows NT 10.0; Win64; x64)`. The expanded row holds the request line, the agent string, and the resolver that supplied the address. If you ran `collect`, `T5-EXFIL-001` also appears with a `Content-Length` above 4 KB.
 6. **Decoded check-ins.** Every label appears with host name, user, uid, mode and checksum. A lookalike that fails the checksum appears as `T5-DGA-003` instead.
 7. **Flows.** Three conversations: the updater download, the DNS check-ins, and the telemetry upload. The download row stays in the table on purpose; the tap that watches the check-in also carried the package.
 8. **Expanded event.** Every row opens the same way: the rule, the flow, the timestamp, the matching fields, the packet excerpt in hex, and a link to the pcap. Expand one on stage and leave the rest collapsed.

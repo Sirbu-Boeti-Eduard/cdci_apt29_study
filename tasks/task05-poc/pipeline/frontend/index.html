@@ -46,6 +46,35 @@
       </div>
     </section>
 
+    <section class="card story-card">
+      <div class="section-heading"><div><p class="eyebrow">SUPPLY CHAIN</p><h2>Why the build is the vulnerability</h2></div><span class="state-pill">One file</span></div>
+      <div class="story-flow">
+        <div class="story-box">
+          <p class="eyebrow">APPROVED SOURCE</p>
+          <strong>orion_support.py</strong>
+          <p>Health telemetry only. No DNS check-in, no tasking.</p>
+        </div>
+        <div class="story-arrow">→</div>
+        <div class="story-box step">
+          <p class="eyebrow">BUILD STEP</p>
+          <strong>service-compat</strong>
+          <p>Replaces the component in the build workspace.</p>
+        </div>
+        <div class="story-arrow">→</div>
+        <div class="story-box bad">
+          <p class="eyebrow">SIGNED ARTIFACT</p>
+          <strong>orion_support.py</strong>
+          <p>Encoded DNS check-in, CNAME handoff, HTTP tasking, command execution, file upload.</p>
+        </div>
+      </div>
+      <div class="story-metrics">
+        <span><strong>0</strong> client-side exploits</span>
+        <span><strong>3</strong> checks passed</span>
+        <span><strong>1</strong> build step</span>
+      </div>
+      <p class="story-note">The catalog digest, RSA signature, and component digest all pass. The signature proves who signed the package, not that the build matched the source. One changed file reaches every client that trusts the vendor.</p>
+    </section>
+
     <section class="card">
       <div class="section-heading"><div><p class="eyebrow">STABLE CHANNEL</p><h2>Published releases</h2></div><span id="published-count" class="count-pill">0 releases</span></div>
       <div class="table-wrap"><table><thead><tr><th>Version</th><th>Package</th><th>Rollout</th><th>SHA-256</th></tr></thead><tbody id="releases"><tr><td colspan="4">Loading release channel…</td></tr></tbody></table></div>
