@@ -87,7 +87,7 @@ def killchain() -> dict[str, object]:
         "delivery": client.get("version") == "v3",
         "install": any(isinstance(item, dict) and item.get("status") == "running" for item in components),
         "c2": bool(beacons) or bool(attacker.get("queries")),
-        "tasking": bool(attacker.get("pending_task")) or bool(results),
+        "tasking": bool(results),
         "detection": any(
             isinstance(item, dict)
             and not (item.get("rule") == "T5-C2-001" and item.get("dport") == 8000)
