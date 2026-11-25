@@ -54,8 +54,8 @@ CHAIN = (
     ("delivery", "Delivery"),
     ("install", "Installation"),
     ("c2", "C2"),
-    ("tasking", "Tasking"),
     ("detection", "Detection"),
+    ("tasking", "Tasking"),
     ("response", "Response"),
 )
 
