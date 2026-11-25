@@ -121,7 +121,7 @@ Transition: what the active channel looked like.`,
     lead: "Active traffic imitated the Orion Improvement Program: JSON under 10,000 bytes with userId, sessionID and a steps array, and commands hidden in the response body.",
     items: [
       { head: "Tasking", text: "Process execution, file transfer, registry access and reboot." },
-      { head: "Second stage", text: "TEARDROP ran in memory and read its payload from a file disguised as an image; Raindrop did the same job differently." },
+      { head: "Second stage", text: "TEARDROP ran in memory and opened a file named gracious_truth.jpg; Raindrop was a second loader for the same purpose." },
       { head: "Cobalt Strike", text: "Beacon gave the operators hands-on control, in at least one case started through an IFEO value on dllhost.exe." },
       { head: "Objective", text: "AdFind, DCSync and forged SAML tokens reached Microsoft 365 mailboxes." },
     ],
@@ -210,7 +210,7 @@ Transition: what actually ran.`,
       ["Reconnaissance", "Nothing", "Not modelled"],
       ["Weaponization", "A prebuilt V3 package pins a component digest", "Represented"],
       ["Delivery", "Signed package, stable channel, HTTP download", "Executed"],
-      ["Exploitation", "Client verifies and installs V3", "Executed"],
+      ["Exploitation", "No vulnerability; the client trusts the signed package", "Not applicable"],
       ["Installation", "Installer registers the component and starts it", "Executed, reduced"],
       ["Command and control", "Encoded check-in, mode by answer, CNAME, POST", "Executed, reduced"],
       ["Actions on objectives", "One shell command and its output", "Executed, reduced"],
@@ -219,7 +219,7 @@ Transition: what actually ran.`,
 
 Be precise about the word represented. The V3 package exists as an artifact, but there is no build system, so SUNSPOT's swap and restore is not performed.
 
-Everything from delivery onward ran. Installation and tasking are reduced: one process, one command, no persistence.
+Delivery and installation ran. Installation and tasking are reduced: one process, one command, no persistence. Exploitation is marked not applicable because there is no vulnerability to trigger.
 
 Transition: show the verification result.`,
   },
