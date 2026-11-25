@@ -1,0 +1,60 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{ragged2e}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{xurl}
+\usepackage[hidelinks]{hyperref}
+\usepackage{caption}
+\usepackage{float}
+\captionsetup{font=small,labelfont=bf}
+
+\graphicspath{{../../tasks/task02-ttp/diagrams/}}
+
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{0pt}
+\setlength{\emergencystretch}{2em}
+\renewcommand{\arraystretch}{1.15}
+
+\title{\textbf{APT29 and the SolarWinds Supply-Chain Compromise}\\[0.4em]
+\large From SUNSPOT to a Controlled Recreation in Mininet and Docker}
+
+\author{CDCI Assignment 1}
+\date{November 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+\noindent
+This article examines APT29's compromise of the SolarWinds Orion build pipeline and a controlled recreation of its delivery and command-and-control stages. It traces the actor's history, the techniques used in the incident, the public evidence of its infrastructure and victims, and the countermeasures proposed for each stage. The recreation uses Mininet and Docker to publish a signed package that carries a component, then reproduces the DNS check-in, mode selection, CNAME handoff, and operator tasking. The client accepts the tampered package because every integrity check passes, which isolates the trust failure from any implementation defect. The article states where the lab diverges from the incident, reviews six peer-reviewed papers on supply-chain integrity and DNS detection, and derives a research question on combining artifact verification with DNS monitoring. It does not claim to reproduce SUNBURST or to measure the effectiveness of the countermeasures it discusses.
+\end{abstract}
+
+\noindent\textbf{Keywords:} APT29; SolarWinds; SUNBURST; software supply chain; Mininet; DNS monitoring; reproducible builds.
+
+\vspace{1em}
+
+\input{sections/01-introduction}
+\input{sections/02-actor}
+\input{sections/03-operation}
+\input{sections/04-online}
+\input{sections/05-victims}
+\input{sections/06-recreation}
+\input{sections/07-detection}
+\input{sections/08-countermeasures}
+\input{sections/09-literature}
+\input{sections/10-question}
+\input{sections/11-conclusion}
+
+\input{references}
+
+\end{document}

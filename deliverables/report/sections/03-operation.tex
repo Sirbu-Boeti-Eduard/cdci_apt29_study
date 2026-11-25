@@ -1,0 +1,29 @@
+\section{The SolarWinds operation}
+\label{sec:operation}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.92\textwidth,keepaspectratio]{architecture.png}
+\caption{Attack architecture for the SolarWinds compromise, as documented in the Task~2 analysis. The build compromise precedes distribution; the lab in Section~\ref{sec:recreation} models the right-hand side of this path.}
+\label{fig:architecture}
+\end{figure}
+
+Figure~\ref{fig:architecture} places the build compromise at the start of the chain: the actor works inside the supplier's environment, and every later stage inherits the supplier's legitimacy. The subsections below follow that path.
+
+\subsection{Build compromise}
+
+SolarWinds stated that it could not determine how the attackers first entered its network~\cite{solarwinds-sec}. What is documented is what they did once inside. CrowdStrike analysed an implant called SUNSPOT that ran on the Orion build server as \texttt{taskhostsvc.exe}, kept alive by a scheduled task. It waited for \texttt{MsBuild.exe}, read the build command line from process memory, and replaced \texttt{InventoryManager.cs} in the solution directory with a modified copy, keeping the original as a \texttt{.bk} file. It restored the original when the build exited, so the source repository looked untouched. The implant checked MD5 hashes before and after the swap and wrapped its edits in \texttt{\#pragma warning disable}~\cite{crowdstrike-sunspot}.
+
+The result was an Orion component containing SUNBURST. SolarWinds signed it through its normal release process and published it as a routine update~\cite{mandiant-campaign,mandiant-sunburst-details}.
+
+\subsection{Dormancy and check-in}
+
+SUNBURST did not act immediately. It required an Active Directory domain, stopped if the domain resembled a SolarWinds test environment, compared running processes against a list of analysis tools, and waited until the plugin file was 12 to 14 days old~\cite{mandiant-sunburst-details}. It then built a subdomain under \texttt{avsvmcloud[.]com} with a domain generation algorithm, encoding a user identifier and the victim's domain, and resolved it with the system DNS client~\cite{mandiant-sunburst-details}.
+
+The coordinator answered with an A record, and the address range set the next state. Truncate (3) disabled the implant. New (4) kept it passive and checking in. Append (5) made it active. A CNAME response supplied the host for HTTPS command and control, which the malware required because it could not use a raw address~\cite{mandiant-sunburst-details}.
+
+\subsection{Command and control and follow-on}
+
+Active traffic imitated the Orion Improvement Program: JSON documents under 10,000 bytes with fields such as \texttt{userId}, \texttt{sessionID}, and a \texttt{steps} array, with commands hidden in the response body. The tasking covered process execution, file transfer, registry access, and reboot~\cite{mandiant-sunburst-details}. On selected victims, operators delivered second-stage loaders. TEARDROP ran in memory, read its payload from a file disguised as an image, and in at least one case used an Image File Execution Options value on \texttt{dllhost.exe} to start Cobalt Strike Beacon~\cite{microsoft-teardrop}. Raindrop performed the same role with a different loader~\cite{microsoft-teardrop}. Operators then used AdFind for directory enumeration, stole credentials including through DCSync, and forged SAML tokens to reach Microsoft 365 mailboxes~\cite{mandiant-campaign,microsoft-teardrop}.
+
+The scale is often misread. About 18,000 customers received the affected update. The U.S. Government Accountability Office reported that SolarWinds estimated fewer than 100 were actually compromised, and that nine U.S. federal agencies were among them~\cite{gao}. Receiving the update proved exposure, not intrusion.

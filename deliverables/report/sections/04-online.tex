@@ -1,0 +1,10 @@
+\section{Online presence and threat intelligence}
+\label{sec:online}
+
+APT29's infrastructure work is visible in public reporting, and it follows a consistent preference for services that other organisations already trust.
+
+HAMMERTOSS, documented by FireEye in 2015, generated a new Twitter handle each day and read instructions from a tweet that pointed to an image on a site such as GitHub. The hashtag carried the offset of the hidden data and part of the key. Stolen data went to cloud storage accounts the operators created~\cite{fireeye-hammertoss}. A 2021 advisory describes infrastructure bought with false identities and cryptocurrency, often through temporary email accounts and resellers, including personas using email services on \texttt{cock[.]li} or related domains~\cite{aa21-116a}. No government or vendor report names a specific wallet or payment, and this article does not claim one exists.
+
+The group also borrows legitimate mailing infrastructure. Microsoft reported that NOBELIUM used a compromised USAID Constant Contact account to send phishing mail to about 3,000 accounts at more than 150 organisations, with links through Constant Contact's redirector~\cite{ms-nobelium}. Polish authorities described embassy-themed emails that led to a compromised website and an ENVYSCOUT script using HTML smuggling~\cite{skw-certpolska}. Unit~42 documented a reused car-sale flyer sent to diplomatic missions in Kyiv, with payload control over the Microsoft Graph and Dropbox APIs~\cite{unit42}. In 2023, Microsoft reported Teams messages from newly created \texttt{onmicrosoft.com} tenants that asked users to approve an authenticator prompt~\cite{ms-teams}.
+
+Each case uses a service the target already allows. That is the intelligence value: blocking the actor's domains is less useful than recognising when a trusted service is being used to deliver an untrusted request.
