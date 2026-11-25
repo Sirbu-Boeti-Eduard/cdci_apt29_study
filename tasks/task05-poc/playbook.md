@@ -8,7 +8,7 @@ Presenters: the timed run of show, the speaking lines, and the failure recoverie
 
 | Beat | Open | What appears | Claim it supports |
 | --- | --- | --- | --- |
-| Build | Build & Release | The release pipeline runs checkout, build, manifest, package, sign, and publish; a build step changes one file, and the manifest is generated afterwards and pins it. The supply-chain panel shows the approved source, the `service-compat` step, and the signed artifact side by side. | A signed release can contain code the source never had. |
+| Build | Build & Release | The release pipeline runs checkout, build, manifest, package, sign, and publish; a build step changes one file, and the manifest is generated afterwards and pins it. | A signed release can contain code the source never had. |
 | Delivery | Build & Release, then Orion Network Manager | A V3 package signed with the supplier key reaches the client through the normal channel; the client checks the catalog digest, the RSA signature, and the component digest, then installs. | A signed update can carry malicious code without breaking the normal trust path. |
 | Introduction of the implant | Orion Network Manager history and installed components | The installer registers `orion-improvement-program` from the signed package and starts one process. V1 and V2 start nothing. | The backdoor arrives with the build, not with the platform. |
 | Dormant check-in | Operator Console, Encoded check-ins | Labels built from the host name and user; mode byte 4, then 5 once the coordinator returns the activation address. | The victim identifier is encoded, and the coordinator decides what happens next. |
@@ -136,7 +136,7 @@ sequenceDiagram
 
 | Application | Address | Role |
 | --- | --- | --- |
-| **Build & Release** | `http://localhost:8080` | Run the release pipeline (checkout, build, manifest, package, sign, publish) and inspect its stages; shows the supply-chain impact panel, the catalog, and pipeline output. |
+| **Build & Release** | `http://localhost:8080` | Run the release pipeline (checkout, build, manifest, package, sign, publish) and inspect its stages; shows the catalog and pipeline output. |
 | **Orion Network Manager** | `http://localhost:8081` | Client update agent, version, and normal update history. |
 | **Operator Console** | `http://localhost:8082` | Beacons, typed commands, and the C2 capture. |
 | **Presentation Dashboard** | `http://localhost:8083` | Reset button, the seven-phase attack-story ribbon, and running services. |
