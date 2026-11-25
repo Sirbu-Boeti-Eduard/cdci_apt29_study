@@ -1,0 +1,14 @@
+\section{Research question}
+\label{sec:question}
+
+No paper tests provenance verification, independent rebuilding, and DNS monitoring together. The PoC uses DNS monitoring for detection only, not as a defence, and implements no artifact verification. The article therefore asks:
+
+\begin{quote}
+\textbf{Which stages of a compromised but legitimately signed software-update workflow can independent build-artifact verification and DNS activity monitoring identify in a controlled Mininet and Docker lab, and how many false positives does each control produce?}
+\end{quote}
+
+Three sub-questions separate the stages. Before release, can an independently generated reference artifact or a trusted provenance policy distinguish the tampered V3 from an approved release when both pass signature checks? After installation, which check-ins and CNAME handoffs does DNS logging reveal, and how many alerts does a stated rule raise on benign runs? And which stages remain invisible when either control is used alone?
+
+The evaluation would run a baseline approved update, the tampered update, an artifact comparison, DNS monitoring on labelled runs, and both controls together. It would record detected releases, flagged check-ins, false positives on benign runs, and the stage at which each alert fires. The lab would need benign comparison traffic before any detection rate means anything. If reproducible builds cannot be implemented, an approved-reference comparison is the narrower fallback, and it must not be described as proof of reproducible-build security.
+
+The limits are the lab's: a predefined check-in routine, simplified DNS, no SUNSPOT replacement, no original DGA, and no later-stage malware. Results would describe this environment, not SolarWinds.

@@ -1,7 +1,7 @@
 \section{Academic literature}
 \label{sec:literature}
 
-Six peer-reviewed papers cover the stages the lab touches. The selection rule was publication between 2019 and 2026 in a peer-reviewed venue, with a direct bearing on build integrity, release verification, or network detection of the command channel. Three come from flagship venues (USENIX Security, IEEE S\&P, ICSE); the others are DIMVA and two journals. Studies of open-source package ecosystems are treated as analogous evidence, not as analyses of Orion.
+Six peer-reviewed papers bear on the stages the lab implements. The selection rule was publication between 2019 and 2026 in a peer-reviewed venue, with a direct bearing on build integrity, release verification, or network detection of the command channel. Three come from flagship venues (USENIX Security, IEEE S\&P, ICSE); the others are DIMVA and two journals. Studies of open-source package ecosystems are treated as analogous evidence, not as analyses of Orion.
 
 in-toto (USENIX Security 2019) checks that authorised actors performed the expected steps in a supply chain and that materials and products match recorded evidence. The authors mapped it retrospectively to 30 historical compromises. It addresses the gap SUNSPOT exploited, with the caveat that it depends on trusted policy, keys, and redundant builds~\cite{intoto}.
 
@@ -9,9 +9,9 @@ The Backstabber's Knife Collection (DIMVA 2020) analysed 469 malicious packages 
 
 The SoK taxonomy by Ladisa et al.\ (IEEE S\&P 2023) separates build-time compromise from distribution and maps 107 attack vectors to safeguards. It places the lab's scenario and the controls in Section~\ref{sec:countermeasures}, but its mappings are not test results~\cite{sok-taxonomy}.
 
-Gokkaya et al.\ (JISA 2026) reviewed the supply-chain literature and argues for prioritising controls by risk rather than applying all of them. It frames the mitigation discussion and does not evaluate SolarWinds defences~\cite{gokkaya}.
+Gokkaya et al.\ (JISA 2026) reviews the supply-chain literature and argues for prioritising controls by risk rather than applying all of them. It frames the mitigation discussion and does not evaluate SolarWinds defences~\cite{gokkaya}.
 
-Benedetti et al.\ (ICSE 2025) measured reproducibility across six package ecosystems. A signature says nothing about the build behind it, and an independent rebuild gives a comparison point. The paper does not perform that comparison, and reproducibility does not prove benign code~\cite{reproducible}.
+Benedetti et al.\ (ICSE 2025) sampled six package ecosystems; Go ships no artefacts, so five produce reproducibility rates. We take from this that a signature says nothing about the build behind it, and that an independent rebuild gives a comparison point. The paper does not perform that comparison, and reproducibility does not prove benign code~\cite{reproducible}.
 
 Manasrah et al.\ (JKSU-CIS 2022) detected DGA domains from lexical features of query names. SUNBURST used DNS for control, so query-name telemetry is worth monitoring. The study analyses registrable domains, not subdomains or CNAME targets, so it supports check-in monitoring but not the handoff the lab demonstrates~\cite{dga-detection}.
 
@@ -34,4 +34,4 @@ Manasrah et al.\ (2022) & DNS query-name classification & Post-installation netw
 \end{tabular}
 \end{table}
 
-Two conclusions follow. A signature identifies the signer; provenance and rebuilds address the build. DNS monitoring shows behaviour; it does not show how an artifact was produced. Neither layer replaces the other, and none of the six papers tests the pair together on a signed-update workflow.
+Provenance checks address the build, and DNS monitoring addresses behaviour after installation. A signature addresses neither, and none of the six papers tests the pair together on a signed-update workflow.

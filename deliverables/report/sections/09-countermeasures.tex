@@ -1,0 +1,34 @@
+\section{Countermeasures}
+\label{sec:countermeasures}
+
+Before signing, the controls address the build itself. Separating build infrastructure from office networks, restricting outbound traffic, using short-lived agents, and limiting who can change build jobs all reduce the opportunity SUNSPOT used. CISA recommends restricting access to code and build systems and separating build infrastructure from other networks (p.~12)~\cite{cisa-supply-chain}. Comparing a released artifact with an independently produced reference, or rebuilding from source and comparing hashes, targets the substitution directly. Neither proves the code is benign; a reproducible malicious build is still malicious.
+
+At the customer, least privilege and restricted update permissions limit what an installed component can do. A traffic baseline is a detection control and belongs with the network monitoring below, not with prevention. SBOMs and supplier assessments shorten the time to identify affected components but do not prevent the build compromise (pp.~7 and 13)~\cite{cisa-supply-chain}.
+
+After installation, detection depends on behaviour. DNS logging and anomaly analysis can show an unexpected check-in, and network baselines can separate vendor telemetry from a lookalike. EDR has little to work with while a signed component behaves normally, but becomes useful when the operator acts. CISA's Orion guidance covers reviewing stored traffic for new external DNS domains and comparing a product's expected external communications with what is observed~\cite{cisa-aa20-352a,cisa-supply-chain}.
+
+Table~\ref{tab:countermeasures} rates each control for expected effectiveness and deployment difficulty. The ratings are this article's judgement on a three-point scale, not measurements from the lab.
+
+\begin{table}[H]
+\centering
+\footnotesize
+\caption{Countermeasures by stage, with expected effectiveness and deployment difficulty.}
+\label{tab:countermeasures}
+\begin{tabular}{@{}>{\RaggedRight}p{3.5cm}>{\RaggedRight}p{2.4cm}>{\RaggedRight}p{2.1cm}>{\RaggedRight}p{6.6cm}@{}}
+\toprule
+\textbf{Countermeasure} & \textbf{Effectiveness} & \textbf{Difficulty} & \textbf{Reason} \\
+\midrule
+Build pipeline isolation & High & High & Rebuilds infrastructure, network controls, and developer workflow \\
+Reproducible builds & High & Very high & Catches tampering, but needs pinned dependencies, deterministic toolchains, and controlled timestamps \\
+Independent artifact verification & High & High & Needs a separate verification path, trusted records, and a release gate \\
+HSM-protected signing keys & Low & Medium & Protects the signing step, which the attackers did not need to break \\
+DNS anomaly detection & High & Medium & Gives visibility, but needs logging and tuning; a fixed-domain lab is not a DGA test \\
+Network behaviour analysis & Medium & High & Needs a baseline before deviations mean anything \\
+EDR & Medium & Medium & Limited against a signed passive component \\
+MFA and least privilege & Medium & Low & Limits movement, not the initial update \\
+SBOM and vendor risk management & Low & Medium & Gives visibility rather than prevention \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The controls with the most effect are also the hardest to deploy, which is the practical problem with supply-chain defence. A customer cannot verify a build it did not perform, and a supplier cannot prove a build was clean without records the attacker could not alter.

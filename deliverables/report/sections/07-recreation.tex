@@ -3,7 +3,7 @@
 
 \subsection{Design}
 
-The lab is one Mininet network inside a Docker container. A supplier pipeline signs releases, an updater serves them, a DNS coordinator answers check-ins, and an HTTP receiver acts as the control server. The victim's only link to the switch crosses a bridging sensor, so every packet is captured rather than read from an application log. Five small web apps expose the supplier, the client, the operator, the presenter, and the defender.
+The lab is one Mininet network inside a Docker container. A supplier pipeline signs releases, an updater serves them, a DNS coordinator answers check-ins, and an HTTP receiver acts as the control server. The victim's only link to the switch crosses a bridging sensor, so every packet is captured rather than read from an application log. Five small web apps expose the supplier, the client, the attacker console, the presenter, and the defender.
 
 The client verifies the catalog digest, an RSA/SHA-256 signature against a pinned public key, and the component digest before extraction. The supplier can publish V1 and V2 as data-only packages and one V3 package that declares a component. The manifest names \texttt{orion-improvement-program}, its file, and its SHA-256; the pipeline rejects files the manifest does not declare~\cite{task05lab}.
 
@@ -20,12 +20,12 @@ Table~\ref{tab:killchain} maps the incident to the lab. The status column distin
 \toprule
 \textbf{Phase} & \textbf{In the incident} & \textbf{In the lab} & \textbf{Status} \\
 \midrule
-Reconnaissance & Build chain understood before SUNSPOT was written~\cite{crowdstrike-sunspot} & Nothing & Not modelled \\
+Reconnaissance & Build pipeline understood before SUNSPOT was written~\cite{crowdstrike-sunspot} & Nothing & Not modelled \\
 Weaponization & Source file replaced during the build, original restored~\cite{crowdstrike-sunspot} & Prebuilt V3 package declares a component and pins its digest & Represented \\
 Delivery & Signed update through the normal channel~\cite{mandiant-campaign} & Signed package published to a stable channel, downloaded over HTTP & Executed \\
-Exploitation & Customer installs the update & Client verifies and installs V3 & Executed \\
+Exploitation & No vulnerability; the customer trusts the signed package & No vulnerability; the client accepts V3 after all checks pass & Not applicable \\
 Installation & Backdoored DLL loads inside Orion & Installer registers the component and starts one process & Executed, reduced \\
-Command and control & DGA check-in, mode by A record, CNAME handoff, OIP-shaped HTTPS & Encoded check-in, mode by coordinator answer, CNAME handoff, HTTP POST & Executed, reduced \\
+Command and control & DGA check-in, mode by A record, CNAME handoff, OIP-shaped HTTPS & Encoded check-in, mode by coordinator answer, CNAME used for resolution, HTTP to the bare IP & Executed, reduced \\
 Actions on objectives & TEARDROP to Cobalt Strike, AdFind, credential access, SAML forgery & One shell command and its output & Executed, reduced \\
 \bottomrule
 \end{tabular}
@@ -37,10 +37,10 @@ After installation, the component waits three seconds, builds a base32 label fro
 
 Active traffic goes to \texttt{/swip/upd/orion.improvementprogram.asmx} with an \texttt{Orion/2020.2.4} agent string and a body of fields modelled on the Improvement Program: \texttt{customerId}, \texttt{machineName}, \texttt{userName}, \texttt{osVersion}, \texttt{ipAddress}, and \texttt{processId}. The receiver answers with \texttt{swip.tasks}, and the component returns output in a \texttt{telemetry} block. One shell command per task runs with \texttt{/bin/sh -lc}, with a guardrail against destructive patterns.
 
-Evidence from the demo run is the client history for found, downloaded, verified, installed, and registered component; the capture at \texttt{/tmp/task05-poc/capture/c2-traffic.pcap}; and the sensor state at \texttt{/tmp/task05-poc/sensor/state.json}. The sample package and its digest are pinned in \texttt{pipeline/sample-v3-manifest.json}~\cite{task05lab}.
+A demo run produces three artefacts: the client history, which records the found, downloaded, verified and installed states and then the registered component; the packet capture at \path{/tmp/task05-poc/capture/c2-traffic.pcap}; and the sensor state at \path{/tmp/task05-poc/sensor/state.json}. They are generated during a run and are not yet committed with the repository; the runbook records the rehearsal that produces them~\cite{task05lab}.
 
 \subsection{What the recreation does not do}
 
-The largest gap is weaponization. There is no build system, so SUNSPOT's replacement and restore is represented by a prebuilt package rather than performed. The lab has no Windows host, no signed PE, and no DLL loaded inside a product. Dormancy is compressed from 12 to 14 days to three seconds, and the environment checks are omitted, which makes the lab implant more portable than the original. Check-ins repeat every four seconds against a real minimum of one minute for HTTP and sleeps measured in hours for DNS. The control channel is plain HTTP so the capture can be read, and the implant queries the coordinator directly instead of using the system resolver. There is one victim, no persistence, no second stage, and no lateral movement.
+The largest gap is weaponization. There is no build system, so SUNSPOT's replacement and restore is represented by a prebuilt package rather than performed. The lab has no Windows host, no signed PE, and no DLL loaded inside a product. Dormancy is compressed from 12 to 14 days to three seconds, and the environment checks are omitted, which makes the lab implant more portable than the original. Check-ins repeat every four seconds against a real minimum of one minute for HTTP and sleeps measured in hours for DNS. The control channel is plain HTTP so the capture can be read, and the implant queries the coordinator directly instead of using the system resolver. It also posts to the address it resolved rather than to the CNAME host, so the lab exercises a bare-IP variant; the real implant used the hostname. There is one victim, no persistence, no second stage, and no lateral movement.
 
-These are stated here because Table~\ref{tab:killchain} makes the chain look more complete than the lab is. What the lab reproduces is the trust path and the shape of the check-in, not the actor's code.
+Read on its own, Table~\ref{tab:killchain} makes the chain look complete. The lab reproduces the trust path and the check-in sequence, not the actor's code.

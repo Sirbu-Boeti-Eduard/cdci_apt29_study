@@ -1,0 +1,8 @@
+\section{Detection and response}
+\label{sec:detection}
+
+The sensor reads the capture file the tap writes. It does not read the DNS log, the receiver log, or the scenario state. Seven rules are defined and five are reachable in a single-host run. Two need conditions the lab does not produce: a hand-made lookalike domain and a second source address. One rule imports the implant's own encoder, so a valid checksum shows that the lab's encoder ran, not that an unknown implant is present. Three rules key on lab constants: the check-in suffix, the POST path and agent string, and the four-second cadence. They would not transfer unchanged to a real network, and none has been measured against benign background traffic.
+
+The claim the lab supports is narrower than ``the rules detect SUNBURST''. The check-in is decodable and periodic once captured, and the telemetry upload is visible on the wire. Mandiant rates a CNAME resolution above a decoded DGA label: a decoded label shows only that the implant ran, while a CNAME shows that an operator answered~\cite{mandiant-sunburst-details}. The lab's rules key on the encoded label, which is the weaker signal, and none inspects the CNAME response. The rule set shows what can be recovered from traffic, not what a defender should prioritise.
+
+The two response actions change lab state, not just the display. A resolver block makes the coordinator answer NXDOMAIN, and the implant sends one final mode-3 check-in and exits. Tap isolation installs an egress filter on the switch-side bridge port, so the victim's frames stop reaching the network while the capture keeps recording them. Both are reversible, and the console rejects a mode change while a block is active.
