@@ -8,7 +8,7 @@ Presenters: the timed run of show, the speaking lines, and the failure recoverie
 
 | Beat | Open | What appears | Claim it supports |
 | --- | --- | --- | --- |
-| Build | Build & Release | The release pipeline runs checkout, build, manifest, package, sign, and publish; a build step changes one file, and the manifest is generated afterwards and pins it. | A signed release can contain code the source never had. |
+| Build | Package Index, Build & Release | The hacker publishes `orion-compat 2.0.0` to the public index; the pipeline resolves it over the internal `1.4.2`, runs its install hook, and the manifest is generated afterwards and pins the changed component. | A signed release can contain code the source never had. |
 | Delivery | Build & Release, then Orion Network Manager | A V3 package signed with the supplier key reaches the client through the normal channel; the client checks the catalog digest, the RSA signature, and the component digest, then installs. | A signed update can carry malicious code without breaking the normal trust path. |
 | Introduction of the implant | Orion Network Manager history and installed components | The installer registers `orion-improvement-program` from the signed package and starts one process. V1 and V2 start nothing. | The backdoor arrives with the build, not with the platform. |
 | Dormant check-in | Operator Console, Encoded check-ins | Labels built from the host name and user; mode byte 4, then 5 once the coordinator returns the activation address. | The victim identifier is encoded, and the coordinator decides what happens next. |
@@ -23,8 +23,9 @@ The pieces behind each beat:
 | --- | --- |
 | `lab/dga.py` | Wire format, encoder and decoder for the check-in label, and the parity check against the implant's own encoder. |
 | `pipeline/src/` | The approved source tree: a clean service-health component and the release definition the build starts from. |
-| `pipeline/build/build_release.py` | Copies the source into a workspace, runs the `service-compat` step, generates the manifest from the workspace, and packages. |
-| `pipeline/payload/orion_support.py` | The component the build step injects: identity, label, DNS, Improvement Program upload, tasking, guardrail. |
+| `pipeline/build/build_release.py` | Copies the source into a workspace, resolves `orion-compat` from the internal and public indexes (highest version wins), runs the package's install hook, generates the manifest, and packages. |
+| `pipeline/payload/orion_support.py` | The component the public package ships (a copy lives in `registry/payload/`): identity, label, DNS, Improvement Program upload, tasking, guardrail. |
+| `registry/` | Attacker-controlled public package index: publishes `orion-compat` and serves its build-time install hook. |
 | `pipeline/backend/release_builder.py` | Validates and signs the package, and refuses files the manifest does not declare. |
 | `lab/scenario.py` | Update agent, install, component registration, and the operator console state. |
 | `lab/services.py` | Updater, DNS coordinator, and the HTTP receiver that answers in OIP shape. |
@@ -139,10 +140,11 @@ sequenceDiagram
 | **Build & Release** | `http://localhost:8080` | Run the release pipeline (checkout, build, manifest, package, sign, publish) and inspect its stages; shows the catalog and pipeline output. |
 | **Orion Network Manager** | `http://localhost:8081` | Client update agent, version, and normal update history. |
 | **Operator Console** | `http://localhost:8082` | Beacons, typed commands, and the C2 capture. |
+| **Package Index** | `http://localhost:8085` | Attacker-controlled public registry: publish `orion-compat` and serve its install hook. |
 | **Presentation Dashboard** | `http://localhost:8083` | Reset button, the seven-phase attack-story ribbon, and running services. |
 | **Blue Team** | `http://localhost:8084` | Inline sensor findings, decoded queries, beacon statistics, flows, and the two enforced response actions. |
 
-Open each address in its own tab; the apps do not link to each other. Nginx routes ports 8080 to 8084.
+Open each address in its own tab; the apps do not link to each other. Nginx routes ports 8080 to 8085.
 
 ## How it works
 
@@ -150,7 +152,7 @@ The lab runs a Mininet network in a Linux container behind a private control API
 
 V1 and V2 packages carry only `manifest.json`. The client installs them as data and starts nothing. A V3 manifest may also declare components. Each entry names a file in the same ZIP, pins its SHA-256, and gives the arguments for the service. The installer extracts the package into a work directory, checks every declared digest, records the component inventory, and starts one process per declared component. No other file is executed, and a component the manifest does not declare is never started. This is the build compromise in miniature: the supplier signature covers `orion_support.py` because the supplier's build put it in the package, in the same way the signed Orion update carried the trojanized DLL that SUNBURST lived in.
 
-The build path makes that compromise explicit. `pipeline/src/` holds the approved source; `pipeline/build/build_release.py` copies it into a workspace, runs the `service-compat` step, hashes the workspace, generates the manifest from those hashes, and packages. The step replaces `orion_support.py` with the file in `pipeline/payload/`. Because the manifest is generated after the step, the component digest, the package digest, and the signature all agree with the tampered artifact. The release app exposes one action: **Run release pipeline**. It runs the build, signing, and publishing jobs in order and reports each stage, so the presenter does not sign or publish by hand.
+The build path makes that compromise explicit. `pipeline/src/` holds the approved source; `pipeline/build/build_release.py` copies it into a workspace, resolves the `orion-compat` dependency, hashes the workspace, generates the manifest from those hashes, and packages. The build asks its internal index for `1.4.2` and the public index for `2.0.0`, prefers the higher version, downloads the public package, and runs its install hook. That hook replaces `orion_support.py` with the component the package ships. Because the manifest is generated after the hook, the component digest, the package digest, and the signature all agree with the tampered artifact. The release app exposes one action: **Run release pipeline**. It runs the build, signing, and publishing jobs in order and reports each stage, so the presenter does not sign or publish by hand.
 
 The DNS and HTTP stage follows Mandiant's description of SUNBURST. Each check-in is a UDP A question whose leftmost label is the encoded record. The coordinator decodes the label and rejects a malformed record or a failed checksum with NXDOMAIN. Otherwise it answers by the coordinator mode file: passive returns `192.0.2.10`, active returns `192.0.2.20`, disabled returns NXDOMAIN. The implant starts at mode byte 4, changes to 5 after the activation address, and sends one final check-in at 3 after the kill switch. An active check-in also resolves the fixed CNAME `handoff.orion-lab.test` and then `receiver.orion-lab.test`, so the HTTP address stays out of the packaged component. [Mandiant SUNBURST](https://cloud.google.com/blog/topics/threat-intelligence/evasive-attacker-leverages-solarwinds-supply-chain-compromises-with-sunburst-backdoor) [SolarWinds update](https://www.sec.gov/Archives/edgar/data/1739942/000173994221000076/swi-20210507.htm)
 
@@ -164,18 +166,18 @@ The private key is read-only in the supplier container; the trust volume holds o
 
 The real Orion build was not breached through the source repository. SUNSPOT ran inside the build environment, replaced one source file in the build workspace while the compiler ran, and restored the original afterwards. The repository stayed clean; the compromised DLL shipped inside a signed update; the code-signing certificate made the result trusted. [CrowdStrike SUNSPOT analysis](https://www.crowdstrike.com/en-us/blog/sunspot-malware-technical-analysis/) [SolarWinds update](https://www.sec.gov/Archives/edgar/data/1739942/000173994221000076/swi-20210507.htm)
 
-The lab maps that to one step. `pipeline/src/orion_support.py` is the approved source: it collects identity and posts health telemetry. `pipeline/build/build_release.py` copies the source into a workspace and runs `service-compat`; that step replaces `orion_support.py` with `pipeline/payload/orion_support.py`. The manifest is generated after the step, so it pins the injected file; the RSA signature covers the package; the client's catalog digest, signature, and component digest all pass.
+The lab uses a related build-time failure: dependency confusion. The real incident was SUNSPOT, not dependency confusion; the property is the same, a build that trusts something the source repository does not control. `pipeline/src/orion_support.py` is the approved source: it collects identity and posts health telemetry. The build resolves `orion-compat` by asking its internal index (`1.4.2`) and the public index, and choosing the highest version. The hacker publishes `2.0.0` to the public index, so the build downloads that package and runs its install hook; the hook replaces `orion_support.py` with the component the package ships. The manifest is generated after the hook, so it pins the injected file; the RSA signature covers the package; the client's catalog digest, signature, and component digest all pass.
 
-The value is the trust boundary, not the payload. The attacker needs no client vulnerability, no phishing, and no credentials at the victim. One changed file in the build reaches every customer who trusts the vendor's update channel, and the signature check that is meant to stop tampering is the control that makes the package acceptable. That is why the build step, not the implant, is the vulnerability.
+The value is the trust boundary, not the payload. The attacker needs no client vulnerability, no phishing, and no credentials at the victim. One public package with a higher version reaches every customer who trusts the vendor's update channel, and the signature check that is meant to stop tampering is the control that makes the package acceptable. That is why the build step, not the implant, is the vulnerability.
 
 Four controls would change the outcome:
 
-- a reproducible build that rebuilds from the tagged source and compares the artifact;
+- pin `orion-compat` to the internal registry and version, and verify a lockfile hash;
+- scope the package namespace or registry so the public package cannot satisfy the internal name;
 - a signed provenance attestation that binds the source revision to the output digest;
-- a signing policy that refuses an artifact whose provenance does not match the approved source;
-- build isolation that stops a build step from modifying the workspace.
+- a signing policy that refuses an artifact whose build inputs are not pinned.
 
-The lab shows the first one conceptually: the source component hash (`8f68…`) and the artifact component hash (`28cb…`) differ, and the difference is one build step. It does not implement the other three.
+The lab shows the effect conceptually: the build log says the public `2.0.0` won, the source component hash (`8f68…`) and the artifact component hash (`28cb…`) differ, and the difference is one install hook. It does not implement the controls.
 
 ## Inline sensor and tap
 
@@ -218,7 +220,7 @@ Two limits matter for the demo. Mandiant says the real implant reached its C2 th
 
 Start Docker Desktop on macOS, open `tasks/task05-poc`, and run `docker compose up --build`. On Linux, use Docker Engine with the Compose plugin and the same command.
 
-If a port is taken, set `PIPELINE_PORT=8180 CLIENT_PORT=8181 ATTACKER_PORT=8182 DASHBOARD_PORT=8183 BLUE_PORT=8184` before starting. Run `docker compose down` before rebuilding or to stop.
+If a port is taken, set `PIPELINE_PORT=8180 CLIENT_PORT=8181 ATTACKER_PORT=8182 DASHBOARD_PORT=8183 BLUE_PORT=8184 REGISTRY_PORT=8185` before starting. Run `docker compose down` before rebuilding or to stop.
 
 The Presentation Dashboard has only **Reset lab**. Reset the lab there, and use the client and pipeline apps for update checks, installs, and publishing. Reset rewinds the release channel to V1/V2 first, then the client, the coordinator, the capture, and the sensor. Both halves run even when one of them fails, and the message names the half that did not reset. That is the only way to prepare a second V3 publish.
 
@@ -226,7 +228,7 @@ The Presentation Dashboard has only **Reset lab**. Reset the lab there, and use 
 
 1. **Reset.** Click **Reset lab** in the Presentation Dashboard. This resets the channel to V1/V2, installs V2, stops any running component and clears its files, sets the coordinator to PASSIVE, clears beacons, tasks, and the capture, and restarts the capture and the sensor.
 2. **Set the response mode.** In Operator Console choose **ACTIVE** and click **APPLY**. No beacons exist yet.
-3. **Run the pipeline.** In Build & Release choose **Stable · mandatory** and click **Run release pipeline**. The stage list fills in order: source checkout, build component, generate manifest, package artifact, sign artifact, publish catalog. The build step changes `orion_support.py`, and the manifest is generated afterwards and pins the changed digest. Signing and publishing are pipeline jobs, not separate buttons. V3 cannot be republished; reset before running the pipeline again.
+3. **Publish the dependency and run the pipeline.** In Package Index publish `orion-compat` `2.0.0`; the public index now advertises a higher version than the internal `1.4.2`. In Build & Release choose **Stable · mandatory** and click **Run release pipeline**. The build log says `resolved orion-compat 2.0.0 from the public index (internal 1.4.2)`; the stage list fills in order: source checkout, build component, generate manifest, package artifact, sign artifact, publish catalog. The install hook changes `orion_support.py`, and the manifest is generated afterwards and pins the changed digest. Signing and publishing are pipeline jobs, not separate buttons. V3 cannot be republished; reset before running the pipeline again.
 4. **Watch delivery.** On the next poll the client downloads the catalog, ZIP, and signature, checks the digest and RSA signature, extracts the package, verifies the component digest, and installs V3. Update history shows normal events only: found, downloaded, verified, installed, and one line naming the registered component.
 5. **Watch the beacon.** Three seconds after install the component reads the host name and user, builds the label, and queries `<label>.checkin.orion-lab.test`. In ACTIVE mode the coordinator returns the activation address; the component follows the CNAME handoff and posts its details as an Improvement Program upload. The console lists `orion-01`, user, OS, address, process, PID, and architecture, plus an `Encoded check-ins` table with the decoded host, user, uid, and mode byte. Click any row for the field breakdown. The same label appears in the DNS log and in the pcap. The component repeats the loop every four seconds until the coordinator returns NXDOMAIN or reset stops the process.
 6. **Send a command.** Choose **All beacons** or `orion-01` under **Target**, type `id` or `id; uname -a`, and click **SEND COMMAND**. On the next upload the receiver returns the task in `swip.tasks`, the component runs it with `/bin/sh -lc`, and the output and exit code return in a `telemetry` block and appear under **Command results**. A task queued in PASSIVE waits for an ACTIVE check-in. For the data beat, type `collect customers.csv`; it expands to `base64 -w0` on the decoy sample file, and the large result upload fires `T5-EXFIL-001`.
@@ -271,7 +273,7 @@ Do not click **APPLY** in the operator console while a resolver block is on. The
 
 | Phase | Lab event |
 | --- | --- |
-| Weaponization | Build the tampered V3 artifact; the build step swaps one source file. |
+| Weaponization | Publish `orion-compat 2.0.0` to the public index; the build resolves it and runs its install hook. |
 | Delivery | Publish the signed V3 package to stable. |
 | Exploitation | Client installs the signed package. |
 | Installation | The installer registers the declared component and starts it. |

@@ -9,7 +9,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import ProxyHandler, build_opener
 
-from lab_client import call_lab, call_pipeline
+from lab_client import call_lab, call_pipeline, call_registry
 
 
 PORT = 8080
@@ -26,6 +26,7 @@ SERVICES = (
     ("client", "http://client:8080/health"),
     ("attacker", "http://attacker:8080/health"),
     ("blue", "http://blue:8080/health"),
+    ("registry", "http://registry:8080/health"),
     ("dashboard", "http://127.0.0.1:8080/health"),
     ("gateway", "http://gateway:8083/health"),
 )
@@ -181,6 +182,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 notes.append(str(lab.get("message", "Lab reset.")))
             except RuntimeError as exc:
                 failures.append(f"Lab reset failed: {exc}")
+            try:
+                registry = call_registry("/api/reset", "POST", {}, presenter=True)
+                notes.append(str(registry.get("message", "Package index reset.")))
+            except RuntimeError as exc:
+                failures.append(f"Package index reset failed: {exc}")
             if failures:
                 self.send_json(400, {"error": " ".join(failures + notes)})
                 return

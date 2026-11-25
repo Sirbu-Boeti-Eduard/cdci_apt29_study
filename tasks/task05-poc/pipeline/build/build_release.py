@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
 """Build a V3 release from the approved source tree.
 
-The build is deliberately ordinary: copy ``src/`` into a workspace, run the
-configured build steps, hash what is in the workspace, generate the manifest
-from those hashes, package, and stage the result for signing.
+The build is deliberately ordinary: copy ``src/`` into a workspace, resolve the
+``orion-compat`` dependency from the internal and public indexes, run the
+selected package's install hook, hash the workspace, generate the manifest from
+those hashes, package, and stage the result for signing.
 
-The interesting part is the order.  The manifest is generated *after* the build
-steps run, so it pins whatever the workspace contains.  If a build step changes
-a file, the artifact, the manifest, and the signature all agree with each other
-and every downstream check passes.  That is the property the lab demonstrates:
-a signature proves who signed the artifact, not that the artifact matches the
-source a developer reviewed.
+The interesting part is the dependency resolution and the order.  The build
+prefers the highest version across both indexes, and the manifest is generated
+*after* the install hook runs, so it pins whatever the workspace contains.  If
+the hook changes a file, the artifact, the manifest, and the signature all agree
+with each other and every downstream check passes.  That is the property the
+lab demonstrates: a signature proves who signed the artifact, not that the
+artifact matches the source a developer reviewed.
 
-``--trusted`` runs the same build without the site-specific step.  Comparing the
-two component hashes is the cheap provenance check a release consumer would do
-if they rebuilt from the tagged source.
+``--trusted`` runs the same build against the internal package only.  Comparing
+the two component hashes is the cheap provenance check a release consumer would
+do if they rebuilt from the tagged source.
 """
 
 from __future__ import annotations
@@ -22,18 +24,21 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shutil
 import sys
 import tempfile
 import time
+import zipfile
 from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.error import URLError
+from urllib.request import ProxyHandler, build_opener
 
 HERE = Path(__file__).resolve().parent
 PIPELINE = HERE.parent
 SOURCE_DIR = PIPELINE / "src"
-PAYLOAD_DIR = PIPELINE / "payload"
 BACKEND_DIR = PIPELINE / "backend"
 sys.path.insert(0, str(BACKEND_DIR))
 
@@ -48,8 +53,11 @@ from release_builder import (  # noqa: E402
 )
 
 BUILDER = "orion-ci-01"
-COMPONENT_STEP = "service-compat"
 BUILD_RECORD = "build-record.json"
+DEPENDENCY = "orion-compat"
+INTERNAL_VERSION = "1.4.2"
+PUBLIC_INDEX_URL = os.environ.get("PUBLIC_INDEX_URL", "http://registry:8080")
+DIRECT_HTTP = build_opener(ProxyHandler({}))
 
 
 def _sha256(path: Path) -> str:
@@ -69,21 +77,68 @@ def _tree_digest(hashes: dict[str, str]) -> str:
     return hashlib.sha256(material.encode("utf-8")).hexdigest()
 
 
-def _apply_build_steps(workspace: Path, inject: bool) -> list[str]:
-    """Run the build steps; return the files they changed.
+def _version_key(value: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in value.split("."))
 
-    ``service-compat`` is the step that keeps the telemetry shim aligned with
-    the current service ABI.  In a clean build it is a no-op.  In the build we
-    are studying it replaces the shim with the version shipped in ``payload/``.
+
+def _public_versions(name: str) -> list[str]:
+    """Return the versions the public index advertises, or [] if it is down."""
+    try:
+        with DIRECT_HTTP.open(f"{PUBLIC_INDEX_URL}/api/packages/{name}", timeout=2) as response:
+            value = json.loads(response.read(64 * 1024))
+    except (URLError, OSError, json.JSONDecodeError):
+        return []
+    versions = value.get("versions") if isinstance(value, dict) else None
+    if not isinstance(versions, list):
+        return []
+    return [
+        str(item["version"])
+        for item in versions
+        if isinstance(item, dict) and isinstance(item.get("version"), str)
+    ]
+
+
+def _download_package(name: str, version: str, destination: Path) -> Path:
+    with DIRECT_HTTP.open(f"{PUBLIC_INDEX_URL}/api/packages/{name}/{version}/archive", timeout=5) as response:
+        body = response.read(256 * 1024)
+    archive = Path(destination) / f"{name}-{version}.zip"
+    archive.write_bytes(body)
+    with zipfile.ZipFile(archive) as package:
+        for entry in package.namelist():
+            if entry.startswith("/") or ".." in Path(entry).parts:
+                raise RuntimeError("public package archive contains an unsafe path")
+        package.extractall(destination)
+    return Path(destination)
+
+
+def _run_install_hook(package_dir: Path, workspace: Path) -> None:
+    hook = package_dir / "install.py"
+    if not hook.is_file():
+        return
+    namespace = {"__file__": str(hook), "__name__": "orion_compat_install"}
+    exec(compile(hook.read_text(encoding="utf-8"), str(hook), "exec"), namespace)
+    install = namespace.get("install")
+    if callable(install):
+        install(workspace)
+
+
+def _apply_build_steps(workspace: Path, inject: bool) -> str:
+    """Resolve the compat dependency and run its install hook.
+
+    The build asks its internal index and the public index, then chooses the
+    highest version.  That is the dependency-confusion flaw: a higher public
+    version wins, and its install hook runs inside the build workspace.
     """
     if not inject:
-        return []
-    source = PAYLOAD_DIR / "orion_support.py"
-    target = workspace / "orion_support.py"
-    if not source.is_file() or not target.is_file():
-        raise RuntimeError(f"{COMPONENT_STEP}: build inputs are missing")
-    shutil.copyfile(source, target)
-    return ["orion_support.py"]
+        return f"trusted rebuild: internal {DEPENDENCY} {INTERNAL_VERSION} (clean)"
+    public = _public_versions(DEPENDENCY)
+    selected = max(public, key=_version_key) if public else None
+    if selected is not None and _version_key(selected) > _version_key(INTERNAL_VERSION):
+        with tempfile.TemporaryDirectory(prefix="orion-pkg-") as temporary:
+            package_dir = _download_package(DEPENDENCY, selected, Path(temporary))
+            _run_install_hook(package_dir, workspace)
+        return f"resolved {DEPENDENCY} {selected} from the public index (internal {INTERNAL_VERSION})"
+    return f"resolved {DEPENDENCY} {INTERNAL_VERSION} from the internal index"
 
 
 def _manifest(release: dict[str, object], component: bytes) -> dict[str, object]:
@@ -136,9 +191,10 @@ def build(
         source_hashes = _hash_tree(SOURCE_DIR)
         report("checkout", f"{len(source_hashes)} source files copied into the build workspace")
         before = _hash_tree(workspace)
-        changed = _apply_build_steps(workspace, inject)
+        detail = _apply_build_steps(workspace, inject)
         after = _hash_tree(workspace)
-        report("build", f"{COMPONENT_STEP} changed {', '.join(changed) if changed else 'nothing'}")
+        changed = sorted(name for name in after if before.get(name) != after[name])
+        report("build", detail)
         component = (workspace / "orion_support.py").read_bytes()
         release = json.loads((workspace / "release.json").read_text(encoding="utf-8"))
         manifest = _manifest(release, component)
@@ -158,6 +214,7 @@ def build(
         "workspace_before": before,
         "workspace_after": after,
         "changed": changed,
+        "build_detail": detail,
         "artifact": {
             "name": f"orion-v3-{digest[:16]}.zip",
             "sha256": digest,
@@ -208,10 +265,11 @@ def log_lines(record: dict[str, object]) -> list[str]:
     lines = [
         f"Build started on {record['builder']} from source tree {str(record['source_tree'])[:16]}",
         f"Source orion_support.py  sha256 {str(record['source']['orion_support.py'])[:16]}",
+        f"Build step: {record.get('build_detail', 'no dependency resolution recorded')}",
     ]
     changed = record.get("changed") or []
     if changed:
-        lines.append(f"{COMPONENT_STEP} step changed {', '.join(changed)}")
+        lines.append(f"Changed during build: {', '.join(changed)}")
     lines.extend(
         [
             f"Workspace orion_support.py sha256 {component[:16]}",

@@ -10,12 +10,29 @@ services:
       - signing-private:/private
       - signing-trust:/trust
 
+  registry:
+    build:
+      context: ./registry
+    image: ${IMAGE_PREFIX:-apt29-task05}-registry:local
+    networks:
+      - poc-internal
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; o=urllib.request.build_opener(urllib.request.ProxyHandler({})); o.open('http://127.0.0.1:8080/health', timeout=1).read()"
+      interval: 3s
+      timeout: 2s
+      retries: 10
+
   pipeline:
     build:
       context: ./pipeline
     image: ${IMAGE_PREFIX:-apt29-task05}-pipeline:local
     environment:
       RELEASE_DIR: /data/releases
+      PUBLIC_INDEX_URL: http://registry:8080
     volumes:
       - release-data:/data/releases
       - signing-private:/keys:ro
@@ -24,6 +41,8 @@ services:
     depends_on:
       keygen:
         condition: service_completed_successfully
+      registry:
+        condition: service_healthy
     healthcheck:
       test:
         - CMD
@@ -119,11 +138,15 @@ services:
     environment:
       LAB_URL: http://lab:8080
       PIPELINE_URL: http://pipeline:8080
+      REGISTRY_URL: http://registry:8080
     depends_on:
       lab:
         condition: service_healthy
         restart: true
       pipeline:
+        condition: service_healthy
+        restart: true
+      registry:
         condition: service_healthy
         restart: true
     networks:
@@ -178,12 +201,16 @@ services:
       blue:
         condition: service_healthy
         restart: true
+      registry:
+        condition: service_healthy
+        restart: true
     ports:
       - "127.0.0.1:${PIPELINE_PORT:-8080}:8080"
       - "127.0.0.1:${CLIENT_PORT:-8081}:8081"
       - "127.0.0.1:${ATTACKER_PORT:-8082}:8082"
       - "127.0.0.1:${DASHBOARD_PORT:-8083}:8083"
       - "127.0.0.1:${BLUE_PORT:-8084}:8084"
+      - "127.0.0.1:${REGISTRY_PORT:-8085}:8085"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/task05.conf:ro
     security_opt:
