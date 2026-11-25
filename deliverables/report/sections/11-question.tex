@@ -1,7 +1,7 @@
 \section{Research question}
 \label{sec:question}
 
-None of the six papers reviewed here tests provenance verification, independent rebuilding, and DNS monitoring together. The PoC uses DNS monitoring for detection only; the resolver block is an operator action, not a monitoring-driven defence. It compares an unsigned catalogue digest and verifies the package signature, but it implements no independent verification: no rebuild and no reference-artefact comparison. The article therefore asks:
+None of the six papers reviewed here tests provenance verification, independent rebuilding, and DNS monitoring together. The proof-of-concept (PoC) uses DNS monitoring for detection only; the resolver block is an operator action, not a monitoring-driven defence. It compares an unsigned catalogue digest and verifies the package signature, but it implements no independent verification: no rebuild and no reference-artefact comparison. The article therefore asks:
 
 \begin{quote}
 \textbf{Which stages of a compromised but legitimately signed software-update workflow can independent build-artefact verification and DNS activity monitoring identify in a controlled Mininet and Docker lab, and how many false positives does each control produce?}

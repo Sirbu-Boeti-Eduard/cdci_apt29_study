@@ -5,16 +5,21 @@
 
 The lab is one Mininet network inside a Docker container. A supplier pipeline signs releases, an updater serves them, a DNS coordinator answers check-ins, and an HTTP receiver acts as the control server. The victim's only link to the switch crosses a bridging sensor (Figure~\ref{fig:topology}). The tap is in the path of all victim traffic, but \texttt{tcpdump} writes only UDP/53, TCP/8000 and TCP/9000, so the capture holds DNS, update downloads and uploads, not unrelated traffic. Five small web apps expose the supplier, the client, the attacker console, the presenter, and the defender.
 
-\begin{figure}[t]
+
+
+The client verifies the catalogue digest, an RSA/SHA-256 signature against a pinned public key, and the component digest before extraction. The supplier can publish V1 and V2 as data-only packages and one V3 package that declares a component. The manifest names \texttt{orion-improvement-program}, its file, and its SHA-256; the pipeline rejects files the manifest does not declare~\cite{task05lab}.
+
+
+
+
+The lab is contained by its Docker network. The Mininet network is internal, the web interfaces bind to 127.0.0.1, addresses come from TEST-NET ranges, and domains are defanged. The command guardrail blocks four destructive patterns; it is a convenience, not a boundary. The runbook queues only \texttt{id; uname -a}, and the repository is public so the demonstration can be checked.
+
+\begin{figure}[h]
 \centering
 \includegraphics[width=\textwidth]{topology.png}
 \caption{Lab topology. The victim reaches the switch only through the bridge, and the capture holds DNS, update and upload traffic on UDP/53, TCP/8000 and TCP/9000.}
 \label{fig:topology}
 \end{figure}
-
-The client verifies the catalogue digest, an RSA/SHA-256 signature against a pinned public key, and the component digest before extraction. The supplier can publish V1 and V2 as data-only packages and one V3 package that declares a component. The manifest names \texttt{orion-improvement-program}, its file, and its SHA-256; the pipeline rejects files the manifest does not declare~\cite{task05lab}.
-
-The lab is contained by its Docker network. The Mininet network is internal, the web interfaces bind to 127.0.0.1, addresses come from TEST-NET ranges, and domains are defanged. The command guardrail blocks four destructive patterns; it is a convenience, not a boundary. The runbook queues only \texttt{id; uname -a}, and the repository is public so the demonstration can be checked.
 
 \subsection{Implemented chain}
 
