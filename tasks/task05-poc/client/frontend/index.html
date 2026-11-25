@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orion Network Manager</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body class="client-app">
+  <header class="client-masthead">
+    <div class="client-brand"><span class="client-logo">O</span><span><strong>ORION</strong><small>NETWORK MANAGEMENT</small></span></div>
+    <div class="client-connection"><i></i>Connected to network</div>
+  </header>
+  <main>
+    <header class="product-heading">
+      <div><p class="eyebrow">NETWORK OPERATIONS</p><h1>Orion Network Manager</h1><p id="release-notes" class="release-notes">Loading installed release…</p></div>
+      <div class="installed-badge">Installed <strong id="version">V2</strong></div>
+    </header>
+
+    <section class="card">
+      <div class="section-heading"><div><p class="eyebrow">FLEET</p><h2>Managed devices</h2></div><span class="connected"><i></i>3 devices online</span></div>
+      <div class="table-wrap"><table><thead><tr><th>Device</th><th>Type</th><th>Address</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>edge-router-01</td><td>Router</td><td>10.20.0.1</td><td><span class="device-status">Online</span></td></tr>
+          <tr><td>app-server-01</td><td>Server</td><td>10.20.0.20</td><td><span class="device-status">Online</span></td></tr>
+          <tr><td>file-server-01</td><td>Server</td><td>10.20.0.30</td><td><span class="device-status">Online</span></td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section class="card" id="topology" hidden>
+      <div class="section-heading"><div><p class="eyebrow">NETWORK MAP</p><h2>Topology</h2></div><span class="connected"><i></i>Connected</span></div>
+      <div class="topology" role="img" aria-label="Edge router connects application server and file server">
+        <div class="node"><strong><i></i>Edge router</strong><small>10.20.0.1</small></div>
+        <span class="connector" aria-hidden="true"></span>
+        <div class="branches">
+          <div class="branch"><span class="branch-line" aria-hidden="true"></span><div class="node"><strong><i></i>App server</strong><small>10.20.0.20</small></div></div>
+          <div class="branch"><span class="branch-line" aria-hidden="true"></span><div class="node"><strong><i></i>File server</strong><small>10.20.0.30</small></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card health-card" id="health-summary" hidden>
+      <div class="section-heading"><div><p class="eyebrow">SERVICE HEALTH</p><h2>Network services</h2></div><span class="connected"><i></i>All systems operational</span></div>
+      <div class="health-grid"><div><strong>Core services</strong><span>Healthy</span></div><div><strong>Polling interval</strong><span>60 seconds</span></div><div><strong>Last report</strong><span>Just now</span></div></div>
+    </section>
+
+    <section class="card update-card">
+      <div class="section-heading"><div><p class="eyebrow">SOFTWARE DELIVERY</p><h2>Software updates</h2></div><span id="update-badge" class="update-badge">Checking channel</span></div>
+      <p id="update-message" class="update-message">The update agent is checking the stable channel.</p>
+      <div class="progress-track"><div id="update-progress" class="progress-value"></div></div>
+      <div class="controls">
+        <button id="check-now" class="secondary">Check now</button>
+        <button id="install-update" class="primary" hidden>Install available update</button>
+      </div>
+      <p id="action-message" class="action-message" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="card activity-card">
+      <div class="section-heading"><div><p class="eyebrow">DEVICE ACTIVITY</p><h2>Update history</h2></div><span id="last-check" class="muted"></span></div>
+      <pre id="history">Waiting for update activity…</pre>
+    </section>
+  </main>
+</body>
+</html>

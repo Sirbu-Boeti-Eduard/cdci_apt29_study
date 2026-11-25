@@ -1,0 +1,204 @@
+name: apt29-task05-poc
+
+services:
+  keygen:
+    build:
+      context: ./signing
+    image: ${IMAGE_PREFIX:-apt29-task05}-signing-setup:local
+    restart: "no"
+    volumes:
+      - signing-private:/private
+      - signing-trust:/trust
+
+  pipeline:
+    build:
+      context: ./pipeline
+    image: ${IMAGE_PREFIX:-apt29-task05}-pipeline:local
+    environment:
+      RELEASE_DIR: /data/releases
+    volumes:
+      - release-data:/data/releases
+      - signing-private:/keys:ro
+    networks:
+      - poc-internal
+    depends_on:
+      keygen:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; o=urllib.request.build_opener(urllib.request.ProxyHandler({})); o.open('http://127.0.0.1:8080/health', timeout=1).read()"
+      interval: 2s
+      timeout: 2s
+      retries: 20
+      start_period: 3s
+
+  lab:
+    build:
+      context: ./lab
+    image: ${IMAGE_PREFIX:-apt29-task05}-lab:local
+    hostname: orion-01
+    init: true
+    depends_on:
+      pipeline:
+        condition: service_healthy
+        restart: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_ADMIN
+    security_opt:
+      - apparmor=unconfined
+    volumes:
+      - release-data:/app/releases:ro
+      - signing-trust:/app/trust:ro
+    networks:
+      - poc-internal
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - "import urllib.request; o=urllib.request.build_opener(urllib.request.ProxyHandler({})); o.open('http://127.0.0.1:8080/health', timeout=1).read()"
+      interval: 2s
+      timeout: 2s
+      retries: 30
+      start_period: 5s
+    stop_grace_period: 10s
+
+  client:
+    build:
+      context: ./client
+    image: ${IMAGE_PREFIX:-apt29-task05}-client:local
+    environment:
+      LAB_URL: http://lab:8080
+    depends_on:
+      lab:
+        condition: service_healthy
+        restart: true
+    networks:
+      - poc-internal
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; o=urllib.request.build_opener(urllib.request.ProxyHandler({})); o.open('http://127.0.0.1:8080/health', timeout=1).read()"
+      interval: 3s
+      timeout: 2s
+      retries: 10
+
+  attacker:
+    build:
+      context: ./attacker
+    image: ${IMAGE_PREFIX:-apt29-task05}-attacker:local
+    environment:
+      LAB_URL: http://lab:8080
+    depends_on:
+      lab:
+        condition: service_healthy
+        restart: true
+    networks:
+      - poc-internal
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; o=urllib.request.build_opener(urllib.request.ProxyHandler({})); o.open('http://127.0.0.1:8080/health', timeout=1).read()"
+      interval: 3s
+      timeout: 2s
+      retries: 10
+
+  dashboard:
+    build:
+      context: ./dashboard
+    image: ${IMAGE_PREFIX:-apt29-task05}-dashboard:local
+    environment:
+      LAB_URL: http://lab:8080
+      PIPELINE_URL: http://pipeline:8080
+    depends_on:
+      lab:
+        condition: service_healthy
+        restart: true
+      pipeline:
+        condition: service_healthy
+        restart: true
+    networks:
+      - poc-internal
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; o=urllib.request.build_opener(urllib.request.ProxyHandler({})); o.open('http://127.0.0.1:8080/health', timeout=1).read()"
+      interval: 3s
+      timeout: 2s
+      retries: 10
+
+  blue:
+    build:
+      context: ./blue
+    image: ${IMAGE_PREFIX:-apt29-task05}-blue:local
+    environment:
+      LAB_URL: http://lab:8080
+    depends_on:
+      lab:
+        condition: service_healthy
+        restart: true
+    networks:
+      - poc-internal
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; o=urllib.request.build_opener(urllib.request.ProxyHandler({})); o.open('http://127.0.0.1:8080/health', timeout=1).read()"
+      interval: 3s
+      timeout: 2s
+      retries: 10
+
+  gateway:
+    image: nginx:alpine
+    depends_on:
+      pipeline:
+        condition: service_healthy
+        restart: true
+      client:
+        condition: service_healthy
+        restart: true
+      attacker:
+        condition: service_healthy
+        restart: true
+      dashboard:
+        condition: service_healthy
+        restart: true
+      blue:
+        condition: service_healthy
+        restart: true
+    ports:
+      - "127.0.0.1:${PIPELINE_PORT:-8080}:8080"
+      - "127.0.0.1:${CLIENT_PORT:-8081}:8081"
+      - "127.0.0.1:${ATTACKER_PORT:-8082}:8082"
+      - "127.0.0.1:${DASHBOARD_PORT:-8083}:8083"
+      - "127.0.0.1:${BLUE_PORT:-8084}:8084"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/task05.conf:ro
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - ui-publish
+      - poc-internal
+
+networks:
+  poc-internal:
+    internal: true
+  ui-publish:
+    driver: bridge
+
+volumes:
+  release-data:
+  signing-private:
+  signing-trust:
