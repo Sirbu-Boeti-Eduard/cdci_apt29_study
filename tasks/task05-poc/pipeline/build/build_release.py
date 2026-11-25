@@ -25,6 +25,8 @@ import json
 import shutil
 import sys
 import tempfile
+import time
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -109,8 +111,22 @@ def build(
     release_dir: Path | None = None,
     inject: bool = True,
     stage: bool = True,
+    progress: Callable[[str, str], None] | None = None,
+    stage_delay: float = 0.0,
 ) -> dict[str, object]:
-    """Run one build.  With ``stage`` the artifact is placed for signing."""
+    """Run one build.  With ``stage`` the artifact is placed for signing.
+
+    ``progress`` receives one ``(stage_id, detail)`` call at the end of each
+    build stage.  ``stage_delay`` pauses between stages so a pipeline UI can
+    show them; it defaults to zero for tests and the trusted rebuild.
+    """
+
+    def report(stage_id: str, detail: str) -> None:
+        if progress is not None:
+            progress(stage_id, detail)
+        if stage_delay > 0:
+            time.sleep(stage_delay)
+
     started = datetime.now(timezone.utc)
     with tempfile.TemporaryDirectory(prefix="orion-build-") as temporary:
         workspace = Path(temporary)
@@ -118,14 +134,18 @@ def build(
             if path.is_file():
                 shutil.copyfile(path, workspace / path.name)
         source_hashes = _hash_tree(SOURCE_DIR)
+        report("checkout", f"{len(source_hashes)} source files copied into the build workspace")
         before = _hash_tree(workspace)
         changed = _apply_build_steps(workspace, inject)
         after = _hash_tree(workspace)
+        report("build", f"{COMPONENT_STEP} changed {', '.join(changed) if changed else 'nothing'}")
         component = (workspace / "orion_support.py").read_bytes()
         release = json.loads((workspace / "release.json").read_text(encoding="utf-8"))
         manifest = _manifest(release, component)
+        report("manifest", f"component digest pinned to {manifest['components'][0]['sha256'][:16]}")
         package = _package_bytes(manifest, {"orion_support.py": component})
         digest = hashlib.sha256(package).hexdigest()
+        report("package", f"orion-v3-{digest[:16]}.zip ({len(package)} bytes)")
 
     record: dict[str, object] = {
         "version": "v3",
@@ -156,7 +176,7 @@ def build(
         _atomic_write(staging / str(record["artifact"]["name"]), package)
         metadata = {
             "version": "v3",
-            "source_filename": f"build/{COMPONENT_STEP}",
+            "source_filename": "pipeline/src",
             "artifact": record["artifact"]["name"],
             "sha256": digest,
             "size": len(package),

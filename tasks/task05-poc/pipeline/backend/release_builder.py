@@ -429,7 +429,8 @@ def publish_artifact(release_dir: Path, rollout: str) -> tuple[dict[str, Any], l
     releases.append(entry)
     generation = int(catalog.get("generation", 0)) + 1
     _write_catalog(release_dir, releases, generation)
-    shutil.rmtree(staging, ignore_errors=True)
+    # Keep staging until reset so the app can still show the signed artifact and
+    # its manifest after publishing.  initialize_channel clears it.
     log = [
         f"Catalog generation {generation} prepared",
         f"Published {artifact_name} to stable ({rollout})",

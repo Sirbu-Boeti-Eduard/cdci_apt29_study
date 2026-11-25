@@ -51,3 +51,19 @@ button.secondary { color:#22567a; border-color:#9db5c7; }
 button.warning { border-color:#d0a65d; background:#fff8e9; color:#71470b; }
 .message { min-height:20px; margin:2px 0; color:var(--blue); font-size:12px; }
 @media(max-width:700px) { .release-masthead { min-height:62px; padding:0 14px; } .release-environment { font-size:10px; } main { padding:0 14px 28px; } .artifact-layout { grid-template-columns:1fr; } .page-heading { align-items:flex-start; flex-direction:column; } }
+.hint { margin:0 0 4px; color:var(--muted); font-size:12px; line-height:1.5; }
+.pipeline-progress { height:6px; margin:2px 0 6px; border-radius:99px; background:#e6edf3; overflow:hidden; }
+#pipeline-bar { width:0; height:100%; background:var(--blue); transition:width .4s ease; }
+.pipeline-steps { display:flex; flex-direction:column; gap:7px; margin-bottom:14px; }
+.step { display:grid; grid-template-columns:12px 1fr auto; gap:9px; align-items:center; padding:7px 9px; border:1px solid var(--line); border-radius:7px; background:#fff; }
+.step-dot { width:9px; height:9px; border-radius:50%; background:#c9d5df; }
+.step.running { border-color:#9ec2da; background:#f2f9ff; }
+.step.running .step-dot { background:var(--blue); box-shadow:0 0 0 3px #1769aa22; }
+.step.done { border-color:#bcd9c9; background:#f6fbf8; }
+.step.done .step-dot { background:var(--green); }
+.step.error { border-color:#e0b9b6; background:#fdf5f4; }
+.step.error .step-dot { background:var(--red); }
+.step-body { display:flex; flex-direction:column; gap:1px; min-width:0; }
+.step-body strong { font-size:12px; }
+.step-body small { color:var(--muted); font-size:11px; overflow-wrap:anywhere; }
+.step-time { color:var(--muted); font:10px ui-monospace,SFMono-Regular,Menlo,monospace; }

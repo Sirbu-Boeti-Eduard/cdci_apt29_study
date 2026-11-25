@@ -8,15 +8,15 @@ Short version of the live demo in `tasks/task05-poc`. [playbook.md](./playbook.m
 2. Wait until the dashboard lists every service as running.
 3. Open Dashboard, Build & Release, Orion Network Manager, Operator Console and Blue Team, in that order.
 4. Reset once. Confirm client V2, coordinator `PASSIVE`, tap `forwarding`, empty tables.
-5. Rehearse one build and publish, then reset again. Never start with V3 already published; the pipeline refuses a second build or publish until the channel is reset.
-6. If anyone edited `pipeline/payload/orion_support.py`, the build picks it up automatically. Rebuild `sample-v3-malicious.zip` only if you plan to use the upload path; a stale digest is rejected there.
+5. Rehearse one pipeline run, then reset again. Never start with V3 already published; the pipeline refuses a second run until the channel is reset.
+6. If anyone edited `pipeline/payload/orion_support.py`, the pipeline picks it up automatically; there is no separate sample zip to rebuild.
 7. Check the tap is forwarding and the packet count is moving. Zoom the browser so the tables read from the back row.
 
 ## Steps
 
 1. **Frame it.** On the dashboard, say the customer verifies a signed update correctly and still installs a backdoor, because the supplier's build put one inside the package the supplier signed. Add that the packets, signatures and commands are real, and that the implant is a Python reimplementation of documented behaviour, not the original binary.
 2. **Baseline.** Client tab: V2, clean history, no registered components. Nothing looks wrong yet, and nothing will later either.
-3. **Build and publish.** Build & Release: click **Build from source**. The log shows the source hash, the `service-compat` step changing `orion_support.py`, and the manifest pinning the changed hash. Say the source is clean and the signed artifact is not. Sign it, choose **Stable · mandatory**, publish. The upload path still works with `sample-v3-malicious.zip` if you want the older story.
+3. **Run the pipeline.** Build & Release: choose **Stable · mandatory** and click **Run release pipeline**. The stages fill in order: checkout, build, manifest, package, sign, publish. The build step changes `orion_support.py`, and the manifest is generated afterwards and pins the changed hash. Say the source is clean and the signed artifact is not. Signing and publishing are pipeline jobs; there is nothing else to click.
 4. **Delivery.** Client: found, downloaded, verified, installed, and one line naming the component. Say the catalog digest, the RSA signature and the component digest all passed. That is the claim of the lab, so do not rush it. If V3 does not appear, wait three seconds for the next poll.
 5. **Check-in.** Operator: open a decoded row. Mode 4 then 5, with host, user, uid and checksum. Say the label is base32 over an XOR'd record, the coordinator decoded it and answered with the activation address, and the CNAME handoff supplied the C2 host. Read the hostname off the screen and use that name; if it says `victim`, say `victim`. No rows means the coordinator is not `ACTIVE` or the component did not start.
 6. **C2.** Show the POST: one per interval to `/swip/upd/orion.improvementprogram.asmx`, an `Orion/2020.2.4` agent string, Improvement Program fields. Nothing in it names a command. The giveaways are the bare private address and a Windows agent string sent from a Linux host. Say the lab uses plain HTTP so the room can see the body.
@@ -30,7 +30,7 @@ If time is short, cut step 7 and the second mechanism in step 10. Never cut step
 
 ## 60-second version
 
-Reset, build, sign, publish, watch the install, open one decoded check-in, verify the build, block the suffix. Say the build sentence, the delivery sentence and the detection sentence.
+Reset, run the pipeline, watch the stages and the install, open one decoded check-in, verify the build, block the suffix. Say the build sentence, the delivery sentence and the detection sentence.
 
 ## Questions to expect
 
@@ -57,8 +57,8 @@ Reset, build, sign, publish, watch the install, open one decoded check-in, verif
 | Symptom | Do this |
 | --- | --- |
 | No V3 on the client after publish | Wait three seconds, check Generation, read the publish message |
-| Build refused | V3 is already published; reset the channel first |
-| Verify reports a match | The artifact came from the upload path; build from source again |
+| Build refused | V3 is already published or a run is in progress; reset or wait |
+| Verify reports a match | The artifact came from a manual build; run the pipeline again |
 | V3 installed, no check-in | Apply `ACTIVE`, then check the component inventory; reset if it is absent |
 | Check-ins decoded, no beacon | Confirm the coordinator is `selected`; reset |
 | No alerts at all | Reset and read the tap error |

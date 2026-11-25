@@ -38,37 +38,46 @@ function renderReleases(catalog) {
     </tr>`).join('') || '<tr><td colspan="4">No releases are published.</td></tr>';
 }
 
-function renderArtifact(artifact, catalog) {
-  const published = (catalog.releases || []).some(item => item.version === 'v3');
-  const state = document.getElementById('artifact-state');
-  if (published) {
-    state.textContent = 'V3 published';
-  } else if (!artifact) {
-    state.textContent = 'No artifact';
-  } else if (artifact.signed) {
-    state.textContent = 'Signed';
-  } else {
-    state.textContent = artifact.build_mode === 'release' ? 'Built' : 'Uploaded';
-  }
+function renderArtifact(artifact) {
   document.getElementById('artifact-source').textContent = artifact ? artifact.source_filename : '-';
-  document.getElementById('artifact-name').textContent = artifact ? artifact.artifact : 'Not uploaded';
+  document.getElementById('artifact-name').textContent = artifact ? artifact.artifact : 'Not built';
   document.getElementById('artifact-digest').textContent = artifact ? artifact.sha256 : '-';
   document.getElementById('artifact-size').textContent = artifact ? `${artifact.size} bytes` : '-';
   document.getElementById('artifact-signature').textContent = artifact && artifact.signed ? artifact.signature : 'Not signed';
   document.getElementById('artifact-manifest').textContent = artifact
     ? JSON.stringify(artifact.manifest, null, 2)
-    : 'No artifact uploaded.';
-  document.getElementById('upload-artifact').disabled = published || Boolean(artifact);
-  document.getElementById('build-artifact').disabled = published || Boolean(artifact);
-  document.getElementById('sign-artifact').disabled = !artifact || artifact.signed || published;
-  document.getElementById('publish-artifact').disabled = !artifact || !artifact.signed || published;
-  document.getElementById('rollout').disabled = published;
-  if (published) {
-    message('V3 is published. The channel is immutable until a presenter reset.');
+    : 'No artifact yet.';
+}
+
+function renderPipeline(pipeline) {
+  const stages = pipeline && Array.isArray(pipeline.stages) ? pipeline.stages : [];
+  const total = stages.length || 6;
+  const done = stages.filter(stage => stage.status === 'done').length;
+  const running = Boolean(pipeline && pipeline.state === 'running');
+  const finished = Boolean(pipeline && pipeline.state === 'done');
+  const state = document.getElementById('pipeline-state');
+  state.textContent = !pipeline ? 'Idle'
+    : pipeline.state === 'running' ? 'Running'
+    : pipeline.state === 'done' ? 'Published'
+    : pipeline.state === 'error' ? 'Failed' : 'Idle';
+  document.getElementById('pipeline-bar').style.width = `${Math.round((done / total) * 100)}%`;
+  document.getElementById('run-pipeline').disabled = running || finished;
+  document.getElementById('rollout').disabled = running || finished;
+  if (!stages.length) {
+    document.getElementById('pipeline-steps').innerHTML = '<p class="muted">No pipeline run yet.</p>';
+    return;
   }
+  document.getElementById('pipeline-steps').innerHTML = stages.map(stage => `
+    <div class="step ${stage.status}">
+      <span class="step-dot"></span>
+      <div class="step-body"><strong>${escapeHtml(stage.name)}</strong><small>${escapeHtml(stage.detail || stage.status)}</small></div>
+      <span class="step-time">${escapeHtml(stage.finished_at || stage.started_at || '')}</span>
+    </div>`).join('');
+  message(pipeline.message || '');
 }
 
 function renderBuild(build) {
+  document.getElementById('verify-build').disabled = !build;
   const state = document.getElementById('provenance-state');
   const source = document.getElementById('build-source');
   const changed = document.getElementById('build-changed');
@@ -94,34 +103,18 @@ async function refresh() {
     const state = await response.json();
     if (!response.ok) throw new Error(state.error || 'Release state unavailable');
     renderReleases(state.catalog || {});
-    renderArtifact(state.artifact, state.catalog || {});
-    renderLog(state.build_log || []);
+    renderArtifact(state.artifact);
+    renderPipeline(state.pipeline || null);
     renderBuild(state.build || null);
+    renderLog(state.build_log || []);
   } catch (error) {
     message(error.message);
   }
 }
 
-document.getElementById('upload-artifact').addEventListener('click', async () => {
-  const file = document.getElementById('artifact-file').files[0];
-  if (!file) return message('Choose a V3 ZIP artifact first.');
+document.getElementById('run-pipeline').addEventListener('click', async () => {
   try {
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    let binary = '';
-    for (let index = 0; index < bytes.length; index += 0x8000) {
-      binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
-    }
-    const result = await post('/api/upload-artifact', {filename: file.name, content_base64: btoa(binary)});
-    message(result.message);
-    await refresh();
-  } catch (error) {
-    message(error.message);
-  }
-});
-
-document.getElementById('build-artifact').addEventListener('click', async () => {
-  try {
-    const result = await post('/api/build');
+    const result = await post('/api/pipeline', {rollout: document.getElementById('rollout').value});
     message(result.message);
     await refresh();
   } catch (error) {
@@ -138,26 +131,6 @@ document.getElementById('verify-build').addEventListener('click', async () => {
       : `MISMATCH: artifact ${String(result.artifact).slice(0, 16)} but a rebuild from source gives ${String(result.trusted).slice(0, 16)}.`;
   } catch (error) {
     node.textContent = error.message;
-  }
-});
-
-document.getElementById('sign-artifact').addEventListener('click', async () => {
-  try {
-    const result = await post('/api/sign-artifact');
-    message(result.message);
-    await refresh();
-  } catch (error) {
-    message(error.message);
-  }
-});
-
-document.getElementById('publish-artifact').addEventListener('click', async () => {
-  try {
-    const result = await post('/api/publish-artifact', {rollout: document.getElementById('rollout').value});
-    message(result.message);
-    await refresh();
-  } catch (error) {
-    message(error.message);
   }
 });
 

@@ -46,11 +46,19 @@ def main() -> int:
         release_dir = root / "releases"
         release_builder.initialize_channel(release_dir)
 
-        record = build_release.build(release_dir, inject=True)
+        stages: list[str] = []
+        record = build_release.build(
+            release_dir,
+            inject=True,
+            progress=lambda stage, _detail: stages.append(stage),
+        )
         release_builder.sign_artifact(release_dir)
         artifact = release_builder.read_artifact(release_dir)
 
         trusted = build_release.build(release_dir, inject=False, stage=False)
+
+        if stages != ["checkout", "build", "manifest", "package"]:
+            problems.append(f"unexpected pipeline stages: {stages}")
 
         source = record["source"]["orion_support.py"]
         workspace = record["workspace_after"]["orion_support.py"]
