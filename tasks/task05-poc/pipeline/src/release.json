@@ -1,0 +1,15 @@
+{
+  "product": "Orion Network Manager",
+  "version": "v3",
+  "release_notes": "Adds service health summaries",
+  "client_config": {
+    "theme": "midnight",
+    "topology": true,
+    "health_summary": true
+  },
+  "component": {
+    "name": "orion-improvement-program",
+    "file": "orion_support.py",
+    "args": ["10.0.0.3", "9000", "4"]
+  }
+}

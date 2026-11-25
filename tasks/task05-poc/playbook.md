@@ -8,6 +8,7 @@ Presenters: the timed run of show, the speaking lines, and the failure recoverie
 
 | Beat | Open | What appears | Claim it supports |
 | --- | --- | --- | --- |
+| Build | Build & Release, Build provenance | The source tree is clean; a build step changes one file; the manifest is generated after the change and pins it. | A signed release can contain code the source never had. |
 | Delivery | Build & Release, then Orion Network Manager | A V3 package signed with the supplier key reaches the client through the normal channel; the client checks the catalog digest, the RSA signature, and the component digest, then installs. | A signed update can carry malicious code without breaking the normal trust path. |
 | Introduction of the implant | Orion Network Manager history and installed components | The installer registers `orion-improvement-program` from the signed package and starts one process. V1 and V2 start nothing. | The backdoor arrives with the build, not with the platform. |
 | Dormant check-in | Operator Console, Encoded check-ins | Labels built from the host name and user; mode byte 4, then 5 once the coordinator returns the activation address. | The victim identifier is encoded, and the coordinator decides what happens next. |
@@ -21,7 +22,9 @@ The pieces behind each beat:
 | Path | Role |
 | --- | --- |
 | `lab/dga.py` | Wire format, encoder and decoder for the check-in label, and the parity check against the implant's own encoder. |
-| `pipeline/payload/orion_support.py` | The component that ships in the V3 package: identity, label, DNS, Improvement Program upload, tasking, guardrail. |
+| `pipeline/src/` | The approved source tree: a clean service-health component and the release definition the build starts from. |
+| `pipeline/build/build_release.py` | Copies the source into a workspace, runs the `service-compat` step, generates the manifest from the workspace, and packages. |
+| `pipeline/payload/orion_support.py` | The component the build step injects: identity, label, DNS, Improvement Program upload, tasking, guardrail. |
 | `pipeline/backend/release_builder.py` | Validates and signs the package, and refuses files the manifest does not declare. |
 | `lab/scenario.py` | Update agent, install, component registration, and the operator console state. |
 | `lab/services.py` | Updater, DNS coordinator, and the HTTP receiver that answers in OIP shape. |
@@ -132,7 +135,7 @@ sequenceDiagram
 
 | Application | Address | Role |
 | --- | --- | --- |
-| **Build & Release** | `http://localhost:8080` | Upload, sign, and publish a build artifact; shows the catalog and pipeline output. |
+| **Build & Release** | `http://localhost:8080` | Build from source or upload, sign, and publish; shows build provenance, the catalog, and pipeline output. |
 | **Orion Network Manager** | `http://localhost:8081` | Client update agent, version, and normal update history. |
 | **Operator Console** | `http://localhost:8082` | Beacons, typed commands, and the C2 capture. |
 | **Presentation Dashboard** | `http://localhost:8083` | Reset button and running services. |
@@ -144,7 +147,9 @@ Open each address in its own tab; the apps do not link to each other. Nginx rout
 
 The lab runs a Mininet network in a Linux container behind a private control API. Addresses live in `lab/config.py`. The victim reaches the switch only through a sensor host that bridges the two links, so the sensor carries the updater download, the DNS check-ins, and the HTTP C2. The supplier writes releases to a shared volume, and the updater serves them to the virtual client. The client polls the stable channel every 1.5 seconds, downloads the ZIP and signature over HTTP inside the isolated network, checks the package SHA-256 against the catalog, and verifies an RSA/SHA-256 signature with a pre-provisioned public key.
 
-V1 and V2 packages carry only `manifest.json`. The client installs them as data and starts nothing. A V3 manifest may also declare components. Each entry names a file in the same ZIP, pins its SHA-256, and gives the arguments for the service. The installer extracts the package into a work directory, checks every declared digest, records the component inventory, and starts one process per declared component. No other file is executed, and a component the manifest does not declare is never started. This is the build compromise in miniature: the supplier signature covers `orion_support.py` because the supplier's build put it in the package, in the same way the signed Orion update carried the trojanized DLL that SUNBURST lived in. `pipeline/build_sample_artifact.py` rebuilds `pipeline/sample-v3-malicious.zip` and its pinned digest after an edit to the payload.
+V1 and V2 packages carry only `manifest.json`. The client installs them as data and starts nothing. A V3 manifest may also declare components. Each entry names a file in the same ZIP, pins its SHA-256, and gives the arguments for the service. The installer extracts the package into a work directory, checks every declared digest, records the component inventory, and starts one process per declared component. No other file is executed, and a component the manifest does not declare is never started. This is the build compromise in miniature: the supplier signature covers `orion_support.py` because the supplier's build put it in the package, in the same way the signed Orion update carried the trojanized DLL that SUNBURST lived in.
+
+The build path makes that compromise explicit. `pipeline/src/` holds the approved source; `pipeline/build/build_release.py` copies it into a workspace, runs the `service-compat` step, hashes the workspace, generates the manifest from those hashes, and packages. The step replaces `orion_support.py` with the file in `pipeline/payload/`. Because the manifest is generated after the step, the component digest, the package digest, and the signature all agree with the tampered artifact. **Verify against source** reruns the build without the step; its component hash is the source hash and does not match the artifact. The upload path still works with `pipeline/build_sample_artifact.py` and `sample-v3-malicious.zip` for the older, simpler story.
 
 The DNS and HTTP stage follows Mandiant's description of SUNBURST. Each check-in is a UDP A question whose leftmost label is the encoded record. The coordinator decodes the label and rejects a malformed record or a failed checksum with NXDOMAIN. Otherwise it answers by the coordinator mode file: passive returns `192.0.2.10`, active returns `192.0.2.20`, disabled returns NXDOMAIN. The implant starts at mode byte 4, changes to 5 after the activation address, and sends one final check-in at 3 after the kill switch. An active check-in also resolves the fixed CNAME `handoff.orion-lab.test` and then `receiver.orion-lab.test`, so the HTTP address stays out of the packaged component. [Mandiant SUNBURST](https://cloud.google.com/blog/topics/threat-intelligence/evasive-attacker-leverages-solarwinds-supply-chain-compromises-with-sunburst-backdoor) [SolarWinds update](https://www.sec.gov/Archives/edgar/data/1739942/000173994221000076/swi-20210507.htm)
 
@@ -200,14 +205,14 @@ The Presentation Dashboard has only **Reset lab**. Reset the lab there, and use 
 
 1. **Reset.** Click **Reset lab** in the Presentation Dashboard. This resets the channel to V1/V2, installs V2, stops any running component and clears its files, sets the coordinator to PASSIVE, clears beacons, tasks, and the capture, and restarts the capture and the sensor.
 2. **Set the response mode.** In Operator Console choose **ACTIVE** and click **APPLY**. No beacons exist yet.
-3. **Publish the tampered build.** In Build & Release choose `pipeline/sample-v3-malicious.zip`, click **Upload artifact**, then **Sign artifact**. The ZIP holds `manifest.json` and the declared component `orion_support.py`; the manifest pins the component digest. Choose **Stable · mandatory** and click **Publish to stable**. The pipeline validates the manifest and the component digest, signs the package, and publishes it. V3 cannot be republished; reset before uploading another.
+3. **Build and publish.** In Build & Release click **Build from source**. The build log shows the source hash, the `service-compat` step changing `orion_support.py`, the workspace hash, and the manifest pinning that hash. Click **Sign artifact**, choose **Stable · mandatory**, and click **Publish to stable**. The pipeline signs the package and publishes it. V3 cannot be republished; reset before building another. The upload path with `pipeline/sample-v3-malicious.zip` still works for the older story.
 4. **Watch delivery.** On the next poll the client downloads the catalog, ZIP, and signature, checks the digest and RSA signature, extracts the package, verifies the component digest, and installs V3. Update history shows normal events only: found, downloaded, verified, installed, and one line naming the registered component.
 5. **Watch the beacon.** Three seconds after install the component reads the host name and user, builds the label, and queries `<label>.checkin.orion-lab.test`. In ACTIVE mode the coordinator returns the activation address; the component follows the CNAME handoff and posts its details as an Improvement Program upload. The console lists `orion-01`, user, OS, address, process, PID, and architecture, plus an `Encoded check-ins` table with the decoded host, user, uid, and mode byte. Click any row for the field breakdown. The same label appears in the DNS log and in the pcap. The component repeats the loop every four seconds until the coordinator returns NXDOMAIN or reset stops the process.
 6. **Send a command.** Choose **All beacons** or `orion-01` under **Target**, type `id` or `id; uname -a`, and click **SEND COMMAND**. On the next upload the receiver returns the task in `swip.tasks`, the component runs it with `/bin/sh -lc`, and the output and exit code return in a `telemetry` block and appear under **Command results**. A task queued in PASSIVE waits for an ACTIVE check-in.
 7. **Compare modes.** PASSIVE returns the passive address with no HTTP follow-on, so new beacons and tasks do not proceed, and the implant drops back to mode 4. DISABLED returns NXDOMAIN; the implant sends one final check-in at mode 3 and exits, so no further queries appear. To run the beacon again, reset the lab and publish V3 again. Reset returns the coordinator to PASSIVE.
 8. **Defender view.** Keep the Blue Team tab open through steps 1 to 6. Rows appear while the beacon runs; the walkthrough order is in the next section.
 9. **Respond.** From the Blue Team app, block the check-in suffix or isolate the victim at the tap, and watch the operator console go quiet. Both actions are reversible, and reset restores both.
-10. **Review and reset.** Use either pcap link, from the operator console or an expanded event. The capture now holds the updater download on port 8000 as well as DNS and receiver traffic. Reset again to clear alerts, flows, and both response actions.
+10. **Review and reset.** In Build & Release click **Verify against source**: the trusted rebuild's component hash does not match the artifact's. Use either pcap link, from the operator console or an expanded event. The capture now holds the updater download on port 8000 as well as DNS and receiver traffic. Reset again to clear alerts, flows, and both response actions.
 
 ## Defender view
 
@@ -244,7 +249,7 @@ Do not click **APPLY** in the operator console while a resolver block is on. The
 
 | Phase | Lab event |
 | --- | --- |
-| Weaponization | Upload the tampered V3 artifact. |
+| Weaponization | Build the tampered V3 artifact; the build step swaps one source file. |
 | Delivery | Publish the signed V3 package to stable. |
 | Exploitation | Client installs the signed package. |
 | Installation | The installer registers the declared component and starts it. |

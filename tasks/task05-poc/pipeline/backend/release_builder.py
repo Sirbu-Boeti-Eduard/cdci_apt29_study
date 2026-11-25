@@ -209,6 +209,10 @@ def initialize_channel(release_dir: Path) -> list[str]:
     staging = release_dir / STAGING_DIR
     shutil.rmtree(staging, ignore_errors=True)
     staging.mkdir(parents=True, exist_ok=True)
+    try:
+        (release_dir / "build-record.json").unlink()
+    except FileNotFoundError:
+        pass
     log = [
         "Stable release channel initialized",
         "Orion Network Manager release pipeline online",
@@ -336,6 +340,10 @@ def upload_artifact(release_dir: Path, filename: str, content: bytes) -> tuple[d
     digest = hashlib.sha256(content).hexdigest()
     artifact_name = f"orion-v3-{digest[:16]}.zip"
     staging, meta_path = _staging_paths(release_dir)
+    try:
+        (release_dir / "build-record.json").unlink()
+    except FileNotFoundError:
+        pass
     shutil.rmtree(staging, ignore_errors=True)
     staging.mkdir(parents=True, exist_ok=True)
     _atomic_write(staging / artifact_name, content)

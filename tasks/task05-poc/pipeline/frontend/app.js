@@ -48,7 +48,7 @@ function renderArtifact(artifact, catalog) {
   } else if (artifact.signed) {
     state.textContent = 'Signed';
   } else {
-    state.textContent = 'Uploaded';
+    state.textContent = artifact.build_mode === 'release' ? 'Built' : 'Uploaded';
   }
   document.getElementById('artifact-source').textContent = artifact ? artifact.source_filename : '-';
   document.getElementById('artifact-name').textContent = artifact ? artifact.artifact : 'Not uploaded';
@@ -58,13 +58,34 @@ function renderArtifact(artifact, catalog) {
   document.getElementById('artifact-manifest').textContent = artifact
     ? JSON.stringify(artifact.manifest, null, 2)
     : 'No artifact uploaded.';
-  document.getElementById('upload-artifact').disabled = published || Boolean(artifact && artifact.signed);
+  document.getElementById('upload-artifact').disabled = published || Boolean(artifact);
+  document.getElementById('build-artifact').disabled = published || Boolean(artifact);
   document.getElementById('sign-artifact').disabled = !artifact || artifact.signed || published;
   document.getElementById('publish-artifact').disabled = !artifact || !artifact.signed || published;
   document.getElementById('rollout').disabled = published;
   if (published) {
     message('V3 is published. The channel is immutable until a presenter reset.');
   }
+}
+
+function renderBuild(build) {
+  const state = document.getElementById('provenance-state');
+  const source = document.getElementById('build-source');
+  const changed = document.getElementById('build-changed');
+  const component = document.getElementById('build-component');
+  if (!build) {
+    state.textContent = 'No build';
+    source.textContent = '-';
+    changed.textContent = '-';
+    component.textContent = '-';
+    return;
+  }
+  const files = Array.isArray(build.changed) ? build.changed : [];
+  const sourceHash = (build.source || {})['orion_support.py'] || build.source_tree || '-';
+  source.textContent = String(sourceHash).slice(0, 24);
+  changed.textContent = files.length ? files.join(', ') : 'none';
+  component.textContent = String((build.artifact || {}).component_sha256 || '-').slice(0, 24);
+  state.textContent = files.length ? 'Source differs' : 'Clean build';
 }
 
 async function refresh() {
@@ -75,6 +96,7 @@ async function refresh() {
     renderReleases(state.catalog || {});
     renderArtifact(state.artifact, state.catalog || {});
     renderLog(state.build_log || []);
+    renderBuild(state.build || null);
   } catch (error) {
     message(error.message);
   }
@@ -94,6 +116,28 @@ document.getElementById('upload-artifact').addEventListener('click', async () =>
     await refresh();
   } catch (error) {
     message(error.message);
+  }
+});
+
+document.getElementById('build-artifact').addEventListener('click', async () => {
+  try {
+    const result = await post('/api/build');
+    message(result.message);
+    await refresh();
+  } catch (error) {
+    message(error.message);
+  }
+});
+
+document.getElementById('verify-build').addEventListener('click', async () => {
+  const node = document.getElementById('provenance-message');
+  try {
+    const result = await post('/api/verify-build');
+    node.textContent = result.match
+      ? 'Trusted rebuild matches the artifact.'
+      : `MISMATCH: artifact ${String(result.artifact).slice(0, 16)} but a rebuild from source gives ${String(result.trusted).slice(0, 16)}.`;
+  } catch (error) {
+    node.textContent = error.message;
   }
 });
 

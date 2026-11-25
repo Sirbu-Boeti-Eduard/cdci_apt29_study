@@ -6,6 +6,7 @@ import base64
 import binascii
 import json
 import os
+import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -21,6 +22,9 @@ from release_builder import (
     sign_artifact,
     upload_artifact,
 )
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "build"))
+from build_release import build as build_from_source, log_lines as build_log_lines, read_record  # noqa: E402
 
 
 PORT = 8080
@@ -93,10 +97,12 @@ class PipelineHandler(BaseHTTPRequestHandler):
                 current_log = list(build_log)
                 artifact = read_artifact(RELEASE_DIR)
                 catalog = read_catalog(RELEASE_DIR)
+                record = read_record(RELEASE_DIR)
             self.send_json(200, {
                 "build_log": current_log,
                 "artifact": artifact,
                 "catalog": catalog,
+                "build": record,
             })
         else:
             self.send_json(404, {"error": "Not found."})
@@ -126,6 +132,30 @@ class PipelineHandler(BaseHTTPRequestHandler):
                     for line in log_lines:
                         log(line)
                 message = "Artifact uploaded. Review the manifest, then sign it."
+            elif path == "/api/build":
+                with pipeline_lock:
+                    record = build_from_source(RELEASE_DIR)
+                    for line in build_log_lines(record):
+                        log(line)
+                message = (
+                    f"Built {record['artifact']['name']}; manifest pinned "
+                    f"{record['artifact']['component_sha256'][:16]}."
+                )
+            elif path == "/api/verify-build":
+                with pipeline_lock:
+                    record = read_record(RELEASE_DIR)
+                    trusted = build_from_source(RELEASE_DIR, inject=False, stage=False)
+                if record is None:
+                    raise ValueError("Build or upload a V3 artifact first.")
+                artifact_hash = str(record["artifact"]["component_sha256"])
+                trusted_hash = str(trusted["artifact"]["component_sha256"])
+                self.send_json(200, {
+                    "match": artifact_hash == trusted_hash,
+                    "artifact": artifact_hash,
+                    "trusted": trusted_hash,
+                    "changed": record.get("changed", []),
+                })
+                return
             elif path == "/api/sign-artifact":
                 with pipeline_lock:
                     _artifact, log_lines = sign_artifact(RELEASE_DIR)

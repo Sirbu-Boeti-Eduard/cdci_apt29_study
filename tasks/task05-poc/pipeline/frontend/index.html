@@ -25,7 +25,10 @@
         <div class="artifact-form">
           <label for="artifact-file">V3 package (.zip)</label>
           <input id="artifact-file" type="file" accept=".zip,application/zip">
-          <button id="upload-artifact" class="secondary">Upload artifact</button>
+          <div class="artifact-actions">
+            <button id="build-artifact" class="primary">Build from source</button>
+            <button id="upload-artifact" class="secondary">Upload artifact</button>
+          </div>
           <dl class="artifact-meta">
             <div><dt>Source</dt><dd id="artifact-source">-</dd></div>
             <div><dt>Artifact</dt><dd id="artifact-name">Not uploaded</dd></div>
@@ -46,6 +49,19 @@
           <pre id="artifact-manifest">No artifact uploaded.</pre>
         </div>
       </div>
+    </section>
+
+    <section class="card">
+      <div class="section-heading"><div><p class="eyebrow">PROVENANCE</p><h2>Build provenance</h2></div><span id="provenance-state" class="state-pill">No build</span></div>
+      <dl class="artifact-meta">
+        <div><dt>Source component</dt><dd id="build-source">-</dd></div>
+        <div><dt>Changed by build</dt><dd id="build-changed">-</dd></div>
+        <div><dt>Artifact component</dt><dd id="build-component">-</dd></div>
+      </dl>
+      <div class="artifact-actions">
+        <button id="verify-build" class="warning">Verify against source</button>
+      </div>
+      <p id="provenance-message" class="message" role="status" aria-live="polite"></p>
     </section>
 
     <section class="card">
