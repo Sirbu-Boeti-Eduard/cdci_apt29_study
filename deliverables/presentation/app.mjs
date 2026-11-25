@@ -5,9 +5,9 @@ const DECK_H = 720;
 
 const root = document.getElementById("stage");
 const progress = document.getElementById("progress");
-const counter = document.getElementById("counter");
 const notesPanel = document.getElementById("notes");
 const notesBody = document.getElementById("notes-body");
+const notesToggle = document.getElementById("notes-toggle");
 
 let index = 0;
 let notesOpen = false;
@@ -34,6 +34,7 @@ function header(slide) {
 function footer(slide) {
   const foot = el("footer", "slide-foot");
   foot.append(el("span", "", "APT29 / SolarWinds"));
+  foot.append(el("span", "foot-page", ""));
   return foot;
 }
 
@@ -73,6 +74,7 @@ function steps(slide) {
     row.append(cell);
   });
   body.append(row);
+  if (slide.statement) body.append(el("p", "statement", slide.statement));
   return body;
 }
 
@@ -101,13 +103,16 @@ function table(slide) {
 function cards(slide) {
   const body = el("div", "body");
   const grid = el("div", "cards");
-  grid.style.setProperty("--cols", slide.cards.length >= 4 ? "2" : "3");
+  grid.style.setProperty("--cols", String(Math.min(slide.cards.length, 3)));
   for (const card of slide.cards) {
     const cell = el("article", "card");
-    cell.append(el("h3", "", card.head), el("p", "", card.text));
+    cell.append(el("h3", "", card.head));
+    if (card.tag) cell.append(el("p", "tag", card.tag));
+    cell.append(el("p", "", card.text));
     grid.append(cell);
   }
   body.append(grid);
+  if (slide.statement) body.append(el("p", "statement", slide.statement));
   return body;
 }
 
@@ -121,6 +126,7 @@ function quote(slide) {
 
 function checks(slide) {
   const body = el("div", "body");
+  if (slide.lead) body.append(el("p", "lead", slide.lead));
   const list = el("div", "checks");
   for (const check of slide.checks) {
     const row = el("div", "check");
@@ -135,13 +141,35 @@ function checks(slide) {
   return body;
 }
 
+function figure(slide) {
+  const body = el("div", "body figure-body");
+  const frame = el("div", "figure");
+  frame.innerHTML = slide.svg;
+  body.append(frame);
+  if (slide.caption) body.append(el("p", "figure-caption", slide.caption));
+  return body;
+}
+
+function refs(slide) {
+  const body = el("div", "body");
+  const list = el("div", "refs");
+  slide.items.forEach((item, i) => {
+    const row = el("p", "ref");
+    row.append(el("span", "ref-num", String(i + 1).padStart(2, "0")), el("span", "", item));
+    list.append(row);
+  });
+  body.append(list);
+  if (slide.footnote) body.append(el("p", "refs-note", slide.footnote));
+  return body;
+}
+
 function close(slide) {
   const body = el("div", "body close-body");
   for (const line of slide.lines) body.append(el("p", "close-line", line));
   return body;
 }
 
-const renderers = { bullets, stats, steps, table, cards, quote, checks, close };
+const renderers = { bullets, stats, steps, table, cards, quote, checks, close, figure, refs };
 
 function buildSlide(slide) {
   const section = el("section", `slide kind-${slide.kind}`);
@@ -150,6 +178,7 @@ function buildSlide(slide) {
   if (slide.kind === "title") {
     const body = el("div", "body title-body");
     body.append(el("h1", "", slide.title));
+    if (slide.claim) body.append(el("p", "title-claim", slide.claim));
     if (slide.subtitle) body.append(el("p", "title-sub", slide.subtitle));
     const metaRow = el("div", "title-meta");
     for (const item of slide.meta) metaRow.append(el("span", "", item));
@@ -163,8 +192,6 @@ function buildSlide(slide) {
 for (const slide of slides) root.append(buildSlide(slide));
 
 const nodes = [...root.querySelectorAll(".slide")];
-counter.max = String(nodes.length);
-
 function fit() {
   const pad = 48;
   const scale = Math.min(
@@ -176,7 +203,10 @@ function fit() {
 
 function paint() {
   nodes.forEach((node, i) => node.classList.toggle("active", i === index));
-  counter.textContent = `${String(index + 1).padStart(2, "0")} / ${String(nodes.length).padStart(2, "0")}`;
+  nodes.forEach((node, i) => {
+    const page = node.querySelector(".foot-page");
+    if (page) page.textContent = `${String(i + 1).padStart(2, "0")} / ${String(nodes.length).padStart(2, "0")}`;
+  });
   progress.style.width = `${((index + 1) / nodes.length) * 100}%`;
   notesBody.textContent = slides[index].note ?? "";
   if (history.replaceState) history.replaceState(null, "", `#${index + 1}`);
@@ -190,6 +220,9 @@ function go(next) {
 function toggleNotes() {
   notesOpen = !notesOpen;
   notesPanel.classList.toggle("open", notesOpen);
+  notesPanel.setAttribute("aria-hidden", String(!notesOpen));
+  notesPanel.inert = !notesOpen;
+  notesToggle.setAttribute("aria-expanded", String(notesOpen));
   document.body.classList.toggle("has-notes", notesOpen);
 }
 
@@ -206,12 +239,17 @@ window.addEventListener("keydown", (event) => {
     go(nodes.length - 1);
   } else if (event.key === "n" || event.key === "N") {
     toggleNotes();
+  } else if (event.key === "Escape" && notesOpen) {
+    toggleNotes();
   } else if (event.key === "f" || event.key === "F") {
     if (document.fullscreenElement) document.exitFullscreen();
     else document.documentElement.requestFullscreen?.();
   }
 });
 
+notesPanel.setAttribute("aria-hidden", "true");
+notesPanel.inert = true;
+notesToggle.addEventListener("click", toggleNotes);
 document.getElementById("prev").addEventListener("click", () => go(index - 1));
 document.getElementById("next").addEventListener("click", () => go(index + 1));
 
