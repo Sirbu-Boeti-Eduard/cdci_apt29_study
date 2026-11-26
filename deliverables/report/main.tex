@@ -3,6 +3,7 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{lmodern}
+\usepackage{combelow}
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{microtype}
 \usepackage{graphicx}
@@ -14,7 +15,7 @@
 \usepackage{xurl}
 \def\UrlBreaks{\do\/\do\-\do\_}
 \usepackage[hidelinks]{hyperref}
-\hypersetup{pdftitle={APT29 and the SolarWinds Supply-Chain Compromise},pdfauthor={CDCI Assignment 1},pdfsubject={CDCI Assignment 1 report},pdfkeywords={APT29; SolarWinds; SUNBURST; software supply chain; Mininet; DNS monitoring; reproducible builds},pdflang={en-GB}}
+\hypersetup{pdftitle={APT29 and the SolarWinds Supply-Chain Compromise},pdfauthor={SIRBU BOETI Eduard Cristian; FLORESCU Georgiana-Iuliana; BAZGA Mihai-Carol; GUESMI Emna; MACIUCA Teodor-Alexandru},pdfsubject={CDCI Assignment 1 report},pdfkeywords={APT29; SolarWinds; SUNBURST; software supply chain; Mininet; DNS monitoring; reproducible builds},pdflang={en-GB}}
 \usepackage{caption}
 \usepackage{float}
 \captionsetup{font=small,labelfont=bf,justification=raggedright,singlelinecheck=false}
@@ -31,7 +32,10 @@
 \title{\textbf{APT29 and the SolarWinds Supply-Chain Compromise}\\[0.4em]
 \large From SUNSPOT to a Controlled Recreation in Mininet and Docker}
 
-\author{CDCI Assignment 1}
+\author{
+S\^IRBU BOE\cb{T}I Eduard Cristian \quad FLORESCU Georgiana-Iuliana \\
+BAZGA Mihai-Carol \quad GUESMI Emna \quad M\u{A}CIUC\u{A} Teodor-Alexandru
+}
 \date{November 2026}
 
 \begin{document}
@@ -40,7 +44,7 @@
 
 \begin{abstract}
 \noindent
-This article examines APT29's compromise of the SolarWinds Orion build pipeline and a controlled recreation of its delivery and command-and-control stages. It traces the actor's history, the techniques used in the incident, the public evidence of its infrastructure and victims, and the countermeasures proposed for each stage. The recreation uses Mininet and Docker to publish a signed package that carries a component, then reproduces the DNS check-in, mode selection and operator tasking, using a fixed CNAME handoff that must resolve before any tasking. The client accepts a malicious package that the supplier pipeline signed, which isolates the signing step from any build compromise. The article states where the lab diverges from the incident, reviews six peer-reviewed papers on supply-chain integrity and DNS detection, and derives a research question on combining provenance checks with DNS monitoring. It does not claim to reproduce SUNBURST or to measure the effectiveness of the countermeasures it discusses.
+The report examines APT29's compromise of the SolarWinds Orion build pipeline and a controlled recreation of its delivery and command-and-control stages. It traces the actor's history, the techniques used in the incident, the public evidence of its infrastructure and victims, and the countermeasures proposed for each stage. The recreation uses Mininet and Docker to publish a signed package that carries a component, then reproduces the DNS check-in, mode selection and operator tasking, using a fixed CNAME handoff that must resolve before any tasking. The client accepts a malicious package that the supplier pipeline signed, which isolates the signing step from any build compromise. The report states where the lab diverges from the incident, reviews six peer-reviewed papers on supply-chain integrity and DNS detection, and derives a research question on combining provenance checks with DNS monitoring. It does not claim to reproduce SUNBURST or to measure the effectiveness of the countermeasures it discusses.
 \end{abstract}
 
 {\raggedright\hyphenpenalty=10000\exhyphenpenalty=10000\noindent\textbf{Keywords:} APT29; SolarWinds; SUNBURST; software supply chain; Mininet; DNS monitoring; reproducible builds.\par}
@@ -60,6 +64,7 @@ This article examines APT29's compromise of the SolarWinds Orion build pipeline 
 \input{sections/11-question}
 \input{sections/12-conclusion}
 
+\clearpage
 \input{references}
 
 \end{document}

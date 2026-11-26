@@ -1,7 +1,7 @@
 \section{Techniques, indicators and vulnerabilities}
 \label{sec:techniques}
 
-Delivering and installing the backdoor exploited no software vulnerability, and both steps used the supplier's own build, signing and distribution processes. Later credential and cloud steps did not. That absence matters analytically: a vulnerability-management programme would not have seen this chain, because there was no vulnerable service to patch.
+Delivering and installing the backdoor exploited no software vulnerability, and both steps used the supplier's own build, signing and distribution processes. The later credential and cloud steps did exploit vulnerabilities. A vulnerability-management programme would not have seen this chain, because there was no vulnerable service to patch.
 
 Table~\ref{tab:attack} lists the ATT\&CK techniques that carry the incident. Table~\ref{tab:iocs} lists the indicators published by Microsoft, CrowdStrike, and CISA. Table~\ref{tab:cves} lists vulnerabilities the group used in other campaigns for initial access; none belongs to the Orion compromise~\cite{nsa-svr}.
 
@@ -66,4 +66,4 @@ CVE-2023-42793 & JetBrains TeamCity, authentication bypass & 9.8 & 2023 \\
 \end{tabular}
 \end{table}
 
-The CVE list shows the group's other route into networks: internet-facing appliances and collaboration servers that were unpatched or weakly configured. The SolarWinds campaign bypassed that route entirely. For a defender, the two patterns require different controls. Patching addresses Table~\ref{tab:cves}. Nothing in a patch cycle addresses Table~\ref{tab:attack}, which is the argument for the build controls in Section~\ref{sec:countermeasures}.
+The CVE list shows the group's other route into networks: internet-facing appliances and collaboration servers that were unpatched or weakly configured. The SolarWinds campaign bypassed that route entirely. For a defender, the two patterns require different controls. Patching addresses Table~\ref{tab:cves}. Patching does nothing against the techniques in Table~\ref{tab:attack}, which is why Section~\ref{sec:countermeasures} turns to build controls.

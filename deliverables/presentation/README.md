@@ -14,7 +14,7 @@ Then open <http://localhost:8000>. Keys: arrows or space to move, `n` for speake
 
 ## Printing
 
-`deck.pdf` is the 18-slide export. To regenerate it, print the page to PDF from the browser. The print stylesheet hides the controls, puts one slide on each 1280×720 page, and leaves the notes out.
+`deck.pdf` is the 20-slide export. To regenerate it, print the page to PDF from the browser. The print stylesheet hides the controls, puts one slide on each 1280×720 page, and leaves the notes out.
 
 ## Files
 

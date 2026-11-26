@@ -11,8 +11,12 @@ export const slides = [
     kind: "title",
     kicker: "Tracking an APT group",
     title: "APT29 and the SolarWinds Supply\u2011Chain Compromise",
-    claim: "A backdoor reached 18,000 customers inside a correctly signed update. What did the signature prove?",
+    claim: "An update carrying a backdoor reached as many as 18,000 customers. What did the signature prove?",
     subtitle: "From SUNSPOT to a controlled recreation in Mininet and Docker",
+    team: [
+      "SÎRBU BOEȚI Eduard Cristian · FLORESCU Georgiana-Iuliana",
+      "BAZGA Mihai-Carol · GUESMI Emna · MĂCIUCĂ Teodor-Alexandru",
+    ],
     meta: ["CDCI Assignment 1", "27 November 2026"],
     note: `Target timing: 30 seconds.
 
@@ -26,20 +30,40 @@ Transition: who the group is, in fifty seconds.`,
     kind: "bullets",
     kicker: "THE ACTOR",
     title: "One group, many names",
-    lead: "APT29 works for Russia's Foreign Intelligence Service. Microsoft calls it Midnight Blizzard or NOBELIUM, Mandiant used UNC2452 for SolarWinds, and older reporting says Cozy Bear or The Dukes. Its infrastructure runs on services targets already trust: Twitter in 2015, Constant Contact in 2021, Teams tenants in 2023.",
+    lead: "APT29 is attributed to Russia's Foreign Intelligence Service. Microsoft calls it Midnight Blizzard or NOBELIUM, Mandiant used UNC2452 for SolarWinds, and older reporting says Cozy Bear or The Dukes.",
     items: [
       { head: "At least 2008", text: "Five Eyes agencies date SVR cyber operations to 2008 and list APT29 among the names used for them." },
       { head: "2013 to 2019", text: "Operation Ghost targets foreign ministries in at least three European countries and an EU embassy in Washington." },
       { head: "2015 to 2016", text: "Cozy Bear is on the DNC network from summer 2015; Fancy Bear arrives separately in April 2016." },
       { head: "2023 to 2025", text: "TeamCity exploitation in 2023, then phishing against German parties, diplomats and more than 100 organisations." },
     ],
-    note: `Target timing: 80 seconds.
+    note: `Target timing: 50 seconds.
 
 Say the names once, then the pattern: a long-running espionage group that keeps returning to governments and suppliers.
 
 Do not linger on the DNC. One sentence, then move.
 
-The infrastructure point is one line and it pays off later: the group uses services the target already permits.
+Transition: the services it uses to hide in plain sight.`,
+  },
+  {
+    kind: "bullets",
+    kicker: "ONLINE PRESENCE",
+    title: "Infrastructure that borrows trust",
+    lead: "APT29 rarely needs its own domain to look legitimate. It uses services the target already permits.",
+    items: [
+      { head: "Twitter, 2015", text: "HAMMERTOSS generated a new handle each day and read commands from a tweet that pointed to an image." },
+      { head: "Constant Contact, 2021", text: "A compromised USAID account sent phishing to about 3,000 accounts at more than 150 organisations." },
+      { head: "Embassy websites, 2023", text: "Polish authorities traced embassy-themed mail to a compromised site and an ENVYSCOUT script." },
+      { head: "Teams, 2023", text: "New onmicrosoft.com tenants posed as support and pushed users to approve an Authenticator prompt." },
+    ],
+    statement: "No public source names a specific wallet. The advisory record confirms cryptocurrency use, not an address.",
+    note: `Target timing: 50 seconds.
+
+This is the Task 3 online-presence material, condensed. The pattern matters more than the individual lures: each one arrives through a service the target already allows.
+
+Twitter was the command channel in 2015. Constant Contact carried the 2021 USAID phishing. A compromised embassy website carried ENVYSCOUT in 2023. Teams carried the 2023 credential phishing.
+
+Close the wallet question directly: the advisory says cryptocurrency bought the infrastructure, but no source names an address or payment. Do not invent one.
 
 Transition: the incident itself.`,
   },
@@ -53,7 +77,7 @@ Transition: the incident itself.`,
       { value: "9", label: "U.S. federal agencies reported compromised" },
     ],
     statement: "Downloading the update proves exposure. It does not prove intrusion.",
-    note: `Target timing: 70 seconds.
+    note: `Target timing: 50 seconds.
 
 These three numbers are routinely conflated. Up to about 18,000 customers downloaded the affected builds. SolarWinds estimated fewer than 100 were compromised, and nine federal agencies were among them.
 
@@ -72,7 +96,7 @@ Transition: how the backdoor got into the build.`,
       { head: "Restore", text: "The original returns when the build exits. Source control never shows the change." },
     ],
     statement: "The repository is clean, the signature is valid, and the customer cannot tell.",
-    note: `Target timing: 120 seconds.
+    note: `Target timing: 100 seconds.
 
 CrowdStrike's analysis is the source. The detail that matters is the restore: the repository looked untouched, so a code review would have found nothing.
 
@@ -92,7 +116,7 @@ Transition: the result was signed and shipped.`,
       { head: "Tool check", text: "Running processes are compared against a list of analysis tools." },
       { head: "First contact", text: "It builds a subdomain under avsvmcloud[.]com with a domain generation algorithm (DGA)." },
     ],
-    note: `Target timing: 90 seconds.
+    note: `Target timing: 80 seconds.
 
 Each check defeats a different observer: the delay defeats sandboxes, the domain check defeats analyst machines, the tool list defeats endpoint security.
 
@@ -112,7 +136,7 @@ Transition: the coordinator decided what happened next.`,
       ["CNAME to another host", "handoff", "The named server becomes the HTTPS control host."],
     ],
     statement: "The operator chose each victim here, which is why fewer than 100 of 18,000 were compromised. Our lab resolves the CNAME but posts to the bare IP.",
-    note: `Target timing: 150 seconds.
+    note: `Target timing: 130 seconds.
 
 This is the slide people remember. The coordinator does not send commands over DNS. It sends an address range, and the range selects a mode. A CNAME response supplies the host for the next stage.
 
@@ -131,13 +155,39 @@ Transition: once the coordinator switched it on, this is what the traffic looked
       { head: "Hands-on control", text: "Cobalt Strike Beacon, in at least one case started through a debugger hijack on dllhost.exe." },
       { head: "Objective", text: "AdFind, DCSync, and a stolen SAML signing certificate used to mint tokens for Microsoft 365." },
     ],
-    note: `Target timing: 120 seconds.
+    note: `Target timing: 100 seconds.
 
 The channel is the point: it looked like the product's own telemetry, so signature matching had nothing to work with.
 
 The second stage exists to break the link between the backdoor and the tool. Golden SAML bypassed MFA because the cloud service trusted the token's signer.
 
 Do not explain SAML unless asked. One sentence: they stole the certificate that signs login tokens.
+
+Transition: the record behind the chain.`,
+  },
+  {
+    kind: "table",
+    kicker: "TTPs, TOOLS AND INDICATORS",
+    title: "The record behind the chain",
+    head: ["Area", "What the record shows"],
+    rows: [
+      ["Techniques", "Supply-chain compromise (T1195.002), code signing (T1553.002), DGA (T1568.002), DNS and web C2 (T1071.004, T1071.001), SAML forgery (T1606.002)."],
+      ["Tools", "SUNSPOT ran in the build; SUNBURST shipped in Orion; TEARDROP and Raindrop loaded Cobalt Strike; AdFind and Mimikatz supported access and collection."],
+      ["Vulnerabilities and apps", "None in Orion. Citrix, Pulse Secure, Fortinet, Zimbra and TeamCity belong to other campaigns; AD FS, Microsoft 365 and Teams supported cloud access and phishing."],
+      ["Protocols and indicators", "DNS check-in with an A-record mode and a CNAME handoff, OIP-shaped HTTP(S), and SAML. Key indicators are avsvmcloud[.]com, the SUNBURST and SUNSPOT hashes, and Orion builds 2019.4 HF5, 2020.2 and 2020.2 HF1."],
+    ],
+    statement: "The tools explain the chain. The CVEs show the group's other way in.",
+    note: `Target timing: 60 seconds.
+
+This is the Task 2 material: TTPs, tools, vulnerabilities, protocols and indicators. Do not read the table. Point at one row per beat.
+
+Techniques: supply-chain compromise and code signing carry the incident; DGA, DNS and web C2 carry the check-in; SAML forgery carries the cloud access.
+
+Tools: SUNSPOT is the build implant, SUNBURST the backdoor, TEARDROP and Raindrop the loaders, Cobalt Strike the hands-on tool, AdFind and Mimikatz the discovery and credential tools.
+
+Vulnerabilities: the Orion chain had none. The CVEs in the table are the group's other route into networks. Say that clearly so the table does not imply Orion was patched into safety.
+
+Protocols and indicators: DNS for check-in and mode, HTTP(S) for the telemetry-shaped channel, SAML for forged tokens. The domain, hashes and affected builds are the indicators a defender can key on.
 
 Transition: the bill.`,
   },
@@ -151,7 +201,7 @@ Transition: the bill.`,
       { head: "Check Point", text: "Two infected Orion servers, activity from July to October 2020, two compromised accounts and attempted lateral movement. A USD 995,000 SEC penalty over its disclosures." },
     ],
     statement: "Mimecast and Check Point were penalised for how they described the incident, not for being breached.",
-    note: `Target timing: 90 seconds.
+    note: `Target timing: 70 seconds.
 
 Pick one number per card and let the slide carry the rest. Mimecast held other companies' credentials and a certificate that was used against five customers. DOJ treated every mailbox in the affected accounts as read. Check Point could not establish the full scope.
 
@@ -165,7 +215,7 @@ Transition: which leaves the question we built the lab around.`,
     title: "A valid signature answers a narrower question",
     quote: "The client installs the backdoor because every check passes.",
     support: "Not because a check was bypassed. The catalogue digest, the RSA signature and the component digest all verify. The failure is in what the signature is asked to prove.",
-    note: `Target timing: 90 seconds.
+    note: `Target timing: 80 seconds.
 
 This is the pivot. We did not rebuild SUNBURST; we rebuilt the trust failure around it. A supplier signs a package that carries code, and a client verifies it correctly. The lab's build performs a dependency-confusion swap, not SUNSPOT's source-file replacement, but the signed package still comes from the supplier's own pipeline.
 
@@ -180,64 +230,53 @@ Transition: so we built the smallest thing that could prove the claim.`,
     kicker: "THE LAB",
     title: "One network, one victim, one capture point",
     caption: "Every victim packet crosses the bridge; tcpdump records DNS, the updater and the receiver. The rules read the capture, not the service logs.",
-    svg: `<svg viewBox="0 0 1136 330" role="img" aria-label="Diagram: the victim host reaches switch s1 only through the sensor bridge, which captures DNS, update and upload traffic; three services sit on the switch, and the web apps run outside the Mininet wire.">
+    svg: `<svg viewBox="0 0 900 260" role="img" aria-label="Lab topology: victim, capture bridge, switch and three services">
+  <title>Lab topology</title>
   <defs>
-    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7.5" refY="4" orient="auto">
       <path d="M0,0 L8,4 L0,8 z" fill="#17212b"/>
     </marker>
   </defs>
+  <rect x="0" y="0" width="900" height="260" fill="#ffffff"/>
 
-  <rect x="2" y="86" width="176" height="94" fill="#fffdf8" stroke="#17212b" stroke-width="2"/>
-  <text x="90" y="122" text-anchor="middle" font-size="19" font-weight="600" fill="#17212b">victim</text>
-  <text x="90" y="148" text-anchor="middle" font-size="14" fill="#5a5449">orion-01 · 10.0.0.5</text>
-  <text x="90" y="168" text-anchor="middle" font-size="14" fill="#5a5449">no direct link to s1</text>
+  <rect x="16" y="94" width="150" height="72" fill="#ffffff" stroke="#17212b" stroke-width="1.6"/>
+  <text x="91" y="120" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="bold" fill="#17212b">victim</text>
+  <text x="91" y="140" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13.5" fill="#444">orion-01</text>
+  <text x="91" y="157" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13.5" fill="#444">10.0.0.5</text>
 
-  <line x1="178" y1="133" x2="238" y2="133" stroke="#17212b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="168" y1="130" x2="209" y2="130" stroke="#17212b" stroke-width="1.6" marker-end="url(#arrow)"/>
 
-  <rect x="242" y="54" width="196" height="158" fill="#fffdf8" stroke="#b42318" stroke-width="2"/>
-  <text x="340" y="86" text-anchor="middle" font-size="19" font-weight="600" fill="#17212b">sensor · br0</text>
-  <text x="340" y="112" text-anchor="middle" font-size="14" fill="#5a5449">bridge in the wire</text>
-  <text x="340" y="136" text-anchor="middle" font-size="14" fill="#5a5449">tcpdump → c2-traffic.pcap</text>
-  <text x="340" y="160" text-anchor="middle" font-size="14" fill="#5a5449">rules, flows, intervals</text>
-  <text x="340" y="190" text-anchor="middle" font-size="13" font-weight="600" fill="#b42318">CAPTURE POINT</text>
+  <rect x="212" y="88" width="150" height="84" fill="#ffffff" stroke="#b42318" stroke-width="1.8"/>
+  <text x="287" y="122" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="bold" fill="#17212b">sensor · br0</text>
+  <text x="287" y="148" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="bold" letter-spacing="1.2" fill="#b42318">CAPTURE POINT</text>
 
-  <line x1="438" y1="133" x2="498" y2="133" stroke="#17212b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="364" y1="130" x2="405" y2="130" stroke="#17212b" stroke-width="1.6" marker-end="url(#arrow)"/>
 
-  <rect x="502" y="98" width="112" height="72" fill="#fffdf8" stroke="#17212b" stroke-width="2"/>
-  <text x="558" y="126" text-anchor="middle" font-size="18" font-weight="600" fill="#17212b">s1 switch</text>
-  <text x="558" y="148" text-anchor="middle" font-size="14" fill="#5a5449">10.0.0.0/24</text>
+  <rect x="408" y="104" width="100" height="52" fill="#ffffff" stroke="#17212b" stroke-width="1.6"/>
+  <text x="458" y="126" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="17" font-weight="bold" fill="#17212b">s1</text>
+  <text x="458" y="145" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="13" fill="#444">10.0.0.0/24</text>
 
-  <line x1="614" y1="120" x2="694" y2="70" stroke="#17212b" stroke-width="2" marker-end="url(#arrow)"/>
-  <line x1="614" y1="133" x2="694" y2="133" stroke="#17212b" stroke-width="2" marker-end="url(#arrow)"/>
-  <line x1="614" y1="148" x2="694" y2="198" stroke="#17212b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="510" y1="130" x2="557" y2="56" stroke="#17212b" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <line x1="510" y1="130" x2="557" y2="130" stroke="#17212b" stroke-width="1.6" marker-end="url(#arrow)"/>
+  <line x1="510" y1="130" x2="557" y2="204" stroke="#17212b" stroke-width="1.6" marker-end="url(#arrow)"/>
 
-  <rect x="698" y="34" width="406" height="62" fill="#fffdf8" stroke="#17212b" stroke-width="2"/>
-  <text x="722" y="60" font-size="17" font-weight="600" fill="#17212b">updater · 10.0.0.2:8000</text>
-  <text x="722" y="82" font-size="14" fill="#5a5449">catalogue, package, signature</text>
+  <rect x="560" y="28" width="320" height="56" fill="#ffffff" stroke="#17212b" stroke-width="1.6"/>
+  <text x="580" y="52" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="bold" fill="#17212b">updater</text>
+  <text x="580" y="70" font-family="Helvetica, Arial, sans-serif" font-size="13.5" fill="#444">10.0.0.2:8000</text>
 
-  <rect x="698" y="102" width="406" height="62" fill="#fffdf8" stroke="#17212b" stroke-width="2"/>
-  <text x="722" y="128" font-size="17" font-weight="600" fill="#17212b">DNS coordinator · 10.0.0.3:53</text>
-  <text x="722" y="150" font-size="14" fill="#5a5449">mode by A record, CNAME handoff</text>
+  <rect x="560" y="102" width="320" height="56" fill="#ffffff" stroke="#17212b" stroke-width="1.6"/>
+  <text x="580" y="126" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="bold" fill="#17212b">DNS coordinator</text>
+  <text x="580" y="144" font-family="Helvetica, Arial, sans-serif" font-size="13.5" fill="#444">10.0.0.3:53</text>
 
-  <rect x="698" y="170" width="406" height="62" fill="#fffdf8" stroke="#17212b" stroke-width="2"/>
-  <text x="722" y="196" font-size="17" font-weight="600" fill="#17212b">receiver · 10.0.0.4:9000</text>
-  <text x="722" y="218" font-size="14" fill="#5a5449">OIP-shaped POST, tasking</text>
-
-  <rect x="2" y="242" width="432" height="72" fill="#f2ecdf" stroke="#cfc6b4" stroke-width="1"/>
-  <text x="24" y="264" font-size="14" font-weight="600" fill="#17212b">pipeline · client · attacker console</text>
-  <text x="24" y="284" font-size="14" font-weight="600" fill="#17212b">presenter · defender · package index</text>
-  <text x="24" y="302" font-size="12" fill="#5a5449">localhost:8080–8085, outside the Mininet wire</text>
-
-  <line x1="218" y1="242" x2="218" y2="180" stroke="#5a5449" stroke-width="1.5" stroke-dasharray="4 4"/>
-  <line x1="218" y1="180" x2="242" y2="180" stroke="#5a5449" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <rect x="560" y="176" width="320" height="56" fill="#ffffff" stroke="#17212b" stroke-width="1.6"/>
+  <text x="580" y="200" font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="bold" fill="#17212b">receiver</text>
+  <text x="580" y="218" font-family="Helvetica, Arial, sans-serif" font-size="13.5" fill="#444">10.0.0.4:9000</text>
 </svg>`,
-    note: `Target timing: 90 seconds.
+    note: `Target timing: 70 seconds.
 
 Orient the room in one pass, left to right: the victim, the bridge, the switch, then the three services. The victim has no route to the switch except through the sensor.
 
 That design choice is the argument. Every detection claim is about the wire, not about logs the lab wrote for itself.
-
-The bottom box is the web interface: six small apps outside the Mininet network.
 
 Transition: here is the install the lab produced.`,
   },
@@ -252,13 +291,13 @@ Transition: here is the install the lab produced.`,
       { label: "Component digest", detail: "The extracted module matches the SHA-256 declared in the manifest: 28cbdfb0…61810." },
     ],
     statement: "Then the installer registered orion-improvement-program and started it.",
-    note: `Target timing: 140 seconds.
+    note: `Target timing: 120 seconds.
 
 Walk the three checks in order. The key is pinned and the client cannot write it, so there is no local bypass.
 
 The component digest is the one to point at: 28cbdfb0, ending 61810, the hash of the file the install hook left in the workspace. The approved source component hashes to 55f86d90; the build log shows the public 2.0.0 won and the manifest pins 28cb after the hook. The client history shows found, downloaded, verified, installed, then the registered component.
 
-If asked for proof: the package and manifest are in tasks/task05-poc, and the playbook and runbook describe how to produce the capture and sensor state. No run output is committed, so do not claim one is.
+If asked for proof: the signed package and manifest are part of the lab, and a run produces the capture and sensor state. No run output is stored, so do not claim one is.
 
 Transition: and here is what we did not build.`,
   },
@@ -277,32 +316,33 @@ Transition: and here is what we did not build.`,
       ["Actions on objectives", "One optional benign shell command, plus a decoy-file read", "Implemented, reduced"],
     ],
     statement: "The lab reproduces the trust path and the check-in, not the actor's code.",
-    note: `Target timing: 70 seconds.
+    note: `Target timing: 60 seconds.
 
-This is the honesty slide, and it is deliberately brief. Weaponization is performed, but reduced: the build trusts a higher public dependency and runs its install hook, which is dependency confusion, not SUNSPOT's source-file swap. Reconnaissance is absent. Exploitation is not applicable because there is no vulnerability.
+This is the scope slide, and it is deliberately brief. Weaponization is performed, but reduced: the build trusts a higher public dependency and runs its install hook, which is dependency confusion, not SUNSPOT's source-file swap. Reconnaissance is absent. Exploitation is not applicable because there is no vulnerability.
 
-Delivery and installation are implemented and run when the presenter drives them. Tasking is reduced: one process, one command, no persistence.
+Delivery and installation are implemented and run during the demo. Tasking is reduced: one process, one command, no persistence.
 
 Transition: so what did the defender see?`,
   },
   {
     kind: "bullets",
     kicker: "DETECTION",
-    title: "Eight rules, six tied to this lab",
-    lead: "The sensor decodes the check-in label, measures the interval, records first contact and flags the upload. Eight rules are defined and six fire in a demo; the self-test exercises the other two.",
+    title: "Eight rules on the wire",
+    lead: "The sensor works from the capture, not from service logs. Eight rules cover the check-in label, the beacon cadence, the upload and first contact.",
     items: [
-      { head: "What can be recovered", text: "The check-in is decodable and periodic once captured, the upload is visible on the wire, and a /proc sensor shows the component and its child process." },
-      { head: "What proves less than it looks", text: "Six of eight rules key on lab constants: the check-in suffix, a periodicity threshold, or the POST path, agent and destination. First contact and the 4 KB upload threshold are generic; first contact fires on the benign update." },
-      { head: "The signal we did not implement", text: "Mandiant rates a CNAME resolution above a decoded label; none of our rules alerts on the CNAME response." },
-      { head: "The honest limit", text: "No benign DNS workload was run, so the rule set shows what can be recovered, not what a defender should prioritise." },
+      { head: "Check-in label", text: "Decodes to host, user, uid, mode and checksum. The checksum separates a valid record from a lookalike." },
+      { head: "Beacon cadence", text: "Successive queries hold a four-second interval. The interval rule fires after the fourth query." },
+      { head: "Upload", text: "An Improvement Program POST to a non-global address. The optional collect task pushes the upload above 4 KB." },
+      { head: "Host context", text: "A separate /proc sensor follows the component and its descendants, and records the shell a task starts." },
     ],
-    note: `Target timing: 120 seconds.
+    statement: "The capture shows a decodable, periodic check-in and a telemetry upload.",
+    note: `Target timing: 90 seconds.
 
-Do not oversell. Six of eight are reachable in the demo, and the only benign traffic is the updater's own poll, which first contact flags as new.
+Walk the Blue Team view bottom-up: updater first contact, which is benign and shows the rule working; coordinator first contact; decoded check-ins; interval statistics after four queries; then the POST.
 
-The checksum rule proves the lab's encoder ran, nothing more. Six of the eight rules depend on constants we chose.
+The rules read the capture. The host table is a separate /proc sensor and shows the component and its child process.
 
-Then the concession that buys credibility: Mandiant says the CNAME answer is the stronger signal, and our rules watch the label instead.
+If you ran collect, the upload crosses 4 KB and T5-EXFIL-001 appears. The point is that the beacon is visible before any task is sent.
 
 Transition: what would have helped.`,
   },
@@ -320,11 +360,11 @@ Transition: what would have helped.`,
       ["EDR", "Medium", "Medium"],
     ],
     statement: "Ratings are our judgement on a four-point scale. Three controls act before the signature exists.",
-    note: `Target timing: 90 seconds.
+    note: `Target timing: 70 seconds.
 
 Group the table in three: the first three act before signing, the signing key protects a step the attackers did not need to break, and the last two act after installation.
 
-The ratings are our judgement on a three-point scale, not measurements. Say that once.
+The ratings are our judgement on a four-point scale, not measurements. Say that once.
 
 The line that matters: the controls with the most effect are the ones that require rebuilding someone else's process.
 
@@ -333,15 +373,16 @@ Transition: that is where the research stops.`,
   {
     kind: "cards",
     kicker: "LITERATURE",
-    title: "Six papers, two defensive layers",
+    title: "Six papers, three views",
     cards: [
-      { head: "Before release", tag: "in-toto (2019) · SoK (2023) · reproducible packaging (2025)", text: "Provenance checks record which steps ran; independent rebuilds give a comparison point. Neither proves the code is benign." },
-      { head: "After installation", tag: "Backstabber's Knife (2020) · taxonomy (2026) · DGA detection (2022)", text: "Trusted distribution carries malicious code; DNS query-name analysis detects generated domains, but not our fixed-domain check-in." },
+      { head: "Before release", tag: "in-toto (2019) · reproducible packaging (2025)", text: "Provenance checks record which steps ran; independent rebuilds give a comparison point. Neither proves the code is benign." },
+      { head: "Attack surface", tag: "Backstabber's Knife (2020) · SoK (2023) · Gokkaya (2026)", text: "Trusted distribution carries malicious code; taxonomies and risk reviews map the controls, but they do not test them here." },
+      { head: "After installation", tag: "DGA detection (2022)", text: "DNS query-name analysis detects generated domains, but not our fixed-domain check-in." },
     ],
     statement: "No paper tests provenance verification and DNS monitoring together on a signed update.",
-    note: `Target timing: 40 seconds.
+    note: `Target timing: 30 seconds.
 
-Six papers, all since 2019. Two check the build, two describe the attack surface, two watch the network. None does both.
+Six papers, all since 2019. Two check build integrity, three map the attack surface and controls, one watches DNS. None tests build verification and DNS monitoring together.
 
 Do not read the venues. Point at the tags and move.
 
@@ -353,7 +394,7 @@ Transition: which is the gap the research question comes from.`,
     title: "What we would measure next",
     quote: "Which stages can independent build verification and DNS monitoring identify in a signed-update lab, and how many false positives does each control produce?",
     support: "The lab verifies the vendor's signature and has DNS visibility. It has no independent provenance check and no benign baseline. No results are claimed yet.",
-    note: `Target timing: 40 seconds.
+    note: `Target timing: 30 seconds.
 
 Ask it in one breath, not as a reading. Then separate the two halves: what can be seen before release, and what can be seen after installation.
 
