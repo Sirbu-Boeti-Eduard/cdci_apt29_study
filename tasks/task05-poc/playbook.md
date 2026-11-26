@@ -1,6 +1,6 @@
 # Task 5 PoC Playbook
 
-This walkthrough follows a signed software release from a supplier pipeline to a managed client, then shows the client's DNS check-in and operator tasking. It is a simulation; the only executable code in a package is the small Python component that the signed V3 build carries.
+This walkthrough follows a signed software release from a supplier pipeline to a managed client, then shows the client's DNS check-in and operator tasking. It is a simulation; the only executable code in a signed release package is the small Python component that the V3 build includes.
 
 Presenters: the timed run of show, the speaking lines, and the failure recoveries are in [demo-runbook.md](./demo-runbook.md). This file explains what the lab does and why.
 
@@ -24,7 +24,7 @@ The pieces behind each beat:
 | `lab/dga.py` | Wire format, encoder and decoder for the check-in label, and the parity check against the implant's own encoder. |
 | `pipeline/src/` | The approved source tree: a clean service-health component and the release definition the build starts from. |
 | `pipeline/build/build_release.py` | Copies the source into a workspace, resolves `orion-compat` from the internal and public indexes (highest version wins), runs the package's install hook, generates the manifest, and packages. |
-| `pipeline/payload/orion_support.py` | The component the public package ships (a copy lives in `registry/payload/`): identity, label, DNS, Improvement Program upload, tasking, guardrail. |
+| `registry/payload/orion_support.py` | The component the public package ships: identity, label, DNS, Improvement Program upload, tasking, guardrail. The clean source component that the internal build uses is `pipeline/src/orion_support.py`. |
 | `registry/` | Attacker-controlled public package index: publishes `orion-compat` and serves its build-time install hook. |
 | `pipeline/backend/release_builder.py` | Validates and signs the package, and refuses files the manifest does not declare. |
 | `lab/scenario.py` | Update agent, install, component registration, and the operator console state. |
@@ -87,7 +87,7 @@ sequenceDiagram
 
     Note over V,S: the victim has no direct link to s1. Every message below crosses the bridge.
     Note over S: tcpdump -i br0 -w c2-traffic.pcap<br/>sensor.py tails the capture and scores each record
-    Note over V,O: operator acts through the console / lab control API (:8080), not on the 10.0.0.0/24 wire
+    Note over V,O: operator acts through the console, which calls the lab control API (internal :8080), not on the 10.0.0.0/24 wire
     O->>U: publish signed V3 to the stable channel
     O->>D: set coordinator mode = selected (ACTIVE)
     O->>C: queue task  (id, uname -a)
@@ -156,7 +156,7 @@ The build path makes that compromise explicit. `pipeline/src/` holds the approve
 
 The DNS and HTTP stage follows Mandiant's description of SUNBURST. Each check-in is a UDP A question whose leftmost label is the encoded record. The coordinator decodes the label and rejects a malformed record or a failed checksum with NXDOMAIN. Otherwise it answers by the coordinator mode file: passive returns `192.0.2.10`, active returns `192.0.2.20`, disabled returns NXDOMAIN. The implant starts at mode byte 4, changes to 5 after the activation address, and sends one final check-in at 3 after the kill switch. An active check-in also resolves the fixed CNAME `handoff.orion-lab.test` and then `receiver.orion-lab.test`, so the HTTP address stays out of the packaged component. [Mandiant SUNBURST](https://cloud.google.com/blog/topics/threat-intelligence/evasive-attacker-leverages-solarwinds-supply-chain-compromises-with-sunburst-backdoor) [SolarWinds update](https://www.sec.gov/Archives/edgar/data/1739942/000173994221000076/swi-20210507.htm)
 
-The check-in name is decodable by design. The record holds a version byte, the mode byte, a four-byte victim uid, length-prefixed hostname and username, and a CRC-16 checksum. The implant XORs the record with a fixed keystream derived from one constant string and base32-encodes it without padding, all in `pipeline/payload/orion_support.py`. A fixed key and a standard encoding mean a capture can be decoded offline, the same property that made SUNBURST's own check-in names recoverable. `lab/dga.py` documents the field layout. Its `python3 lab/dga.py` mode compares the coordinator's encoder with the implant's copy on 200 random identities and exits non-zero on any difference.
+The check-in name is decodable by design. The record holds a version byte, the mode byte, a four-byte victim uid, length-prefixed hostname and username, and a CRC-16 checksum. The implant XORs the record with a fixed keystream derived from one constant string and base32-encodes it without padding, all in `registry/payload/orion_support.py`. A fixed key and a standard encoding mean a capture can be decoded offline, the same property that made SUNBURST's own check-in names recoverable. `lab/dga.py` documents the field layout. Its `python3 lab/dga.py` mode compares the coordinator's encoder with the implant's copy on 200 random identities and exits non-zero on any difference.
 
 The HTTP stage is shaped like the update agent's own telemetry. Every upload goes to one endpoint, `/swip/upd/orion.improvementprogram.asmx`, with the vendor's `Orion/2020.2.4` user agent and a body of Improvement Program fields: `customerId`, `machineName`, `userName`, `osVersion`, `ipAddress`, `processId`. Tasking comes back inside the same envelope under `swip.tasks`, and a finished task is another upload whose `telemetry` block carries the exit code and output. Nothing in the request names a command or a check-in. That is the point: on the wire it reads as routine telemetry, and the giveaways are that the destination is a bare private address and that the agent string claims a Windows Orion client while the host runs Linux. A `collect` command expands to `base64 -w0` on the decoy `customers.csv`; the base64 result rides back in the same `telemetry` block, which is why a health check and a data theft look alike until the size gives it away.
 
@@ -177,7 +177,7 @@ Four controls would change the outcome:
 - a signed provenance attestation that binds the source revision to the output digest;
 - a signing policy that refuses an artifact whose build inputs are not pinned.
 
-The lab shows the effect conceptually: the build log says the public `2.0.0` won, the source component hash (`55f8…`) and the artifact component hash (`28cb…`) differ, and the difference is one install hook. It does not implement the controls.
+The lab shows the effect: the build log says it resolved `2.0.0` from the public index and pins the component digest `28cb…`, while the approved source component hashes to `55f8…`; the difference is one install hook. It does not implement the controls.
 
 ## Inline sensor and tap
 
@@ -208,7 +208,7 @@ All eight rules are computed from captured packets. An empty capture produces no
 | `T5-BCN-001` | Intervals between check-in queries from one source: mean, spread, and coefficient of variation over at least three intervals. | The queries are a scheduled beacon, not user or browser timing. |
 | `T5-C2-001` | First packet in this capture from a source to a new destination address and port. | This host opened a conversation with an address nobody had used before. |
 | `T5-C2-002` | HTTP POST to an IP literal in a non-global range on an Improvement Program shaped path such as `/swip/upd/`, or carrying an `Orion/` user agent. | The endpoint never resolves to a public vendor host, yet the client posts updater-shaped data there. |
-| `T5-EXFIL-001` | HTTP POST to a bare IP whose `Content-Length` is above 4 KB on the telemetry path. | A result upload far larger than a health check is data leaving the host. |
+| `T5-EXFIL-001` | HTTP POST to a bare IP whose `Content-Length` is above 4 KB. | A result upload far larger than a health check is data leaving the host. |
 
 The beacon rule fires when the spread is at most 12 percent of the mean (or 0.3 seconds, whichever is larger) over three or more intervals with a mean of at least half a second. The lab beacons every 4 seconds, so it fires on the fourth query.
 
@@ -224,7 +224,7 @@ If a port is taken, set `PIPELINE_PORT=8180 CLIENT_PORT=8181 ATTACKER_PORT=8182 
 
 Set `INSTALL_DELAY_SECONDS=30` in the `lab` environment to lengthen the client's install countdown.
 
-The Presentation Dashboard has only **Reset lab**. Reset the lab there, and use the client and pipeline apps for update checks, installs, and publishing. Reset rewinds the release channel to V1/V2 first, then the client, the coordinator, the capture, and the sensor. Both halves run even when one of them fails, and the message names the half that did not reset. That is the only way to prepare a second V3 publish.
+The Presentation Dashboard has only **Reset lab**. Reset the lab there, and use the client and pipeline apps for update checks, installs, and publishing. Reset rewinds the release channel to V1/V2 and clears the public package index, then resets the client, the coordinator, the capture, and the sensor. All three resets run even when one of them fails, and the message names the part that did not reset. That is the only way to prepare a second V3 publish.
 
 ## Walkthrough
 
@@ -232,7 +232,7 @@ The Presentation Dashboard has only **Reset lab**. Reset the lab there, and use 
 2. **Set the response mode.** In Operator Console choose **ACTIVE** and click **APPLY**. No beacons exist yet.
 3. **Publish the dependency and run the pipeline.** In Package Index publish `orion-compat` `2.0.0`; the public index now advertises a higher version than the internal `1.4.2`. In Build & Release choose **Stable · mandatory** and click **Run release pipeline**. The build log says `resolved orion-compat 2.0.0 from the public index (internal 1.4.2)`; the stage list fills in order: source checkout, build component, generate manifest, package artifact, sign artifact, publish catalog. The install hook changes `orion_support.py`, and the manifest is generated afterwards and pins the changed digest. Signing and publishing are pipeline jobs, not separate buttons. V3 cannot be republished; reset before running the pipeline again.
 4. **Watch delivery.** After the pipeline publishes, the client stages the mandatory V3 for 20 seconds and shows a countdown. Use that time to explain the build and the trust path; when it reaches zero the client downloads the catalog, ZIP, and signature, checks the digest and RSA signature, extracts the package, verifies the component digest, and installs V3. Update history shows normal events only: found, downloaded, verified, installed, and one line naming the registered component.
-5. **Watch the beacon.** Three seconds after install the component reads the host name and user, builds the label, and queries `<label>.checkin.orion-lab.test`. In ACTIVE mode the coordinator returns the activation address; the component follows the CNAME handoff and posts its details as an Improvement Program upload. The console lists `orion-01`, user, OS, address, process, PID, and architecture, plus an `Encoded check-ins` table with the decoded host, user, uid, and mode byte. Click any row for the field breakdown. The same label appears in the DNS log and in the pcap. The component repeats the loop every four seconds until the coordinator returns NXDOMAIN or reset stops the process.
+5. **Watch the beacon.** The component starts at install, waits three seconds, then reads the host name and user, builds the label, and queries `<label>.checkin.orion-lab.test`. In ACTIVE mode the coordinator returns the activation address; the component follows the CNAME handoff and posts its details as an Improvement Program upload. The console lists `orion-01`, user, OS, address, process, PID, and architecture, plus an `Encoded check-ins` table with the decoded host, user, uid, and mode byte. Click any row for the field breakdown. The same label appears in the DNS log and in the pcap. The component repeats the loop every four seconds until the coordinator returns NXDOMAIN or reset stops the process.
 6. **Send a command.** Choose **All beacons** or `orion-01` under **Target**, type `id` or `id; uname -a`, and click **SEND COMMAND**. On the next upload the receiver returns the task in `swip.tasks`, the component runs it with `/bin/sh -lc`, and the output and exit code return in a `telemetry` block and appear under **Command results**. A task queued in PASSIVE waits for an ACTIVE check-in. For the data beat, type `collect customers.csv`; it expands to `base64 -w0` on the decoy sample file, and the large result upload fires `T5-EXFIL-001`.
 7. **Compare modes.** PASSIVE returns the passive address with no HTTP follow-on, so new beacons and tasks do not proceed, and the implant drops back to mode 4. DISABLED returns NXDOMAIN; the implant sends one final check-in at mode 3 and exits, so no further queries appear. To run the beacon again, reset the lab and publish V3 again. Reset returns the coordinator to PASSIVE.
 8. **Defender view.** Keep the Blue Team tab open through steps 1 to 6. Rows appear while the beacon runs; the walkthrough order is in the next section.
@@ -247,15 +247,15 @@ The filter box narrows every table as you type, matching across the visible fiel
 
 Walk through it in this order. Events are newest first, so the story reads from the bottom row upward:
 
-1. **Response controls.** Both read `forwarding` and `open (selected)`. Leave them until the events table has content.
+1. **Response controls.** The tap reads `forwarding` and the resolver reads `open` (mode `selected`). Leave them until the events table has content.
 2. **First contact with the updater.** `T5-C2-001` from `10.0.0.5` to `10.0.0.2:8000`, when the update agent starts polling. The rule fires on an ordinary conversation too, which is what a first-contact rule does.
-3. **First contact with the coordinator.** `T5-C2-001` from `10.0.0.5` to `10.0.0.3:53`, within a second of the V3 install. Expand it for the packet excerpt.
-4. **Interval statistics.** After four queries the table shows the sample count, a mean near 4 seconds and a spread of a few hundredths. The matching `T5-BCN-001` row carries the numbers from the moment it fired.
+3. **First contact with the coordinator.** `T5-C2-001` from `10.0.0.5` to `10.0.0.3:53`, about three seconds after the V3 install. Expand it for the packet excerpt.
+4. **Interval statistics.** After four queries the table shows the sample count, a mean near 4 seconds and a spread under a tenth of a second. The matching `T5-BCN-001` row carries the numbers from the moment it fired.
 5. **Telemetry upload.** `T5-C2-002` for a `POST` to `/swip/upd/orion.improvementprogram.asmx` on `10.0.0.4:9000`, with `User-Agent: Orion/2020.2.4 (Windows NT 10.0; Win64; x64)`. The expanded row holds the request line, the agent string, and the resolver that supplied the address. If you ran `collect`, `T5-EXFIL-001` also appears with a `Content-Length` above 4 KB.
 6. **Decoded check-ins.** Every label appears with host name, user, uid, mode and checksum. A lookalike that fails the checksum appears as `T5-DGA-003` instead.
 7. **Flows.** Three conversations: the updater download, the DNS check-ins, and the telemetry upload. The download row stays in the table on purpose; the tap that watches the check-in also carried the package.
 8. **Expanded event.** Every row opens the same way: the rule, the flow, the timestamp, the matching fields, the packet excerpt in hex, and a link to the pcap. Expand one on stage and leave the rest collapsed.
-9. **Host processes.** The table below the events comes from `/proc`, not the pcap: the registered component, the launcher that started it, and any child. Send `id; sleep 1; uname -a` and watch the `/bin/sh` child appear under the component.
+9. **Host processes.** The table below the events comes from `/proc`, not the pcap: the registered component and any child process. The launcher exits after starting the component, so it does not stay in the table. Send `id; sleep 1; uname -a` and watch the `/bin/sh` child appear under the component.
 
 If the events table stays empty after the V3 install, check the tap status. A stopped capture or an old last-packet time means the sensor is not reading; the error appears next to the tap state.
 
