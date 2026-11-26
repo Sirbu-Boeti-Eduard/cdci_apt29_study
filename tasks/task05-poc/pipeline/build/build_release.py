@@ -233,7 +233,7 @@ def build(
         _atomic_write(staging / str(record["artifact"]["name"]), package)
         metadata = {
             "version": "v3",
-            "source_filename": "pipeline/src",
+            "source_filename": "orion_support.py (source checkout)",
             "artifact": record["artifact"]["name"],
             "sha256": digest,
             "size": len(package),

@@ -98,7 +98,7 @@ def _start_stage(stage_id: str) -> None:
                 stage["started_at"] = _clock()
 
 
-def _finish_stage(stage_id: str, detail: str) -> None:
+def _finish_stage(stage_id: str, detail: str, log_detail: bool = True) -> None:
     with pipeline_status_lock:
         stages = pipeline_status["stages"]
         for index, stage in enumerate(stages):
@@ -112,7 +112,8 @@ def _finish_stage(stage_id: str, detail: str) -> None:
                 following["status"] = "running"
                 following["started_at"] = _clock()
             break
-    log(detail)
+    if log_detail:
+        log(detail)
 
 
 def _progress(stage_id: str, detail: str) -> None:
@@ -141,7 +142,7 @@ def run_pipeline(rollout: str) -> None:
             entry, publish_log = publish_artifact(RELEASE_DIR, rollout)
             for line in publish_log:
                 log(line)
-        _finish_stage("publish", f"Published {entry['artifact']} to stable ({rollout})")
+        _finish_stage("publish", f"Published {entry['artifact']} to stable ({rollout})", log_detail=False)
         with pipeline_status_lock:
             pipeline_status.update({
                 "state": "done",
