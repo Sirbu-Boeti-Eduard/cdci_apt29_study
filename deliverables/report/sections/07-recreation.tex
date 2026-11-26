@@ -3,16 +3,16 @@
 
 \subsection{Design}
 
-The lab is one Mininet network inside a Docker container. A supplier pipeline signs releases, an updater serves them, a DNS coordinator answers check-ins, and an HTTP receiver acts as the control server. The victim's only link to the switch crosses a bridging sensor (Figure~\ref{fig:topology}). The tap is in the path of all victim traffic, but \texttt{tcpdump} writes only UDP/53, TCP/8000 and TCP/9000, so the capture holds DNS, update downloads and uploads, not unrelated traffic. Five small web apps expose the supplier, the client, the attacker console, the presenter, and the defender.
+The lab is one Mininet network inside a Docker container. A supplier pipeline signs releases, an updater serves them, a DNS coordinator answers check-ins, and an HTTP receiver acts as the control server. The victim's only link to the switch crosses a bridging sensor (Figure~\ref{fig:topology}). The tap is in the path of all victim traffic, but \texttt{tcpdump} writes only UDP/53, TCP/8000 and TCP/9000, so the capture holds DNS, update downloads and uploads, not unrelated traffic. Six small web apps expose the release pipeline, the client, the attacker console, the presenter, the defender, and the public package index.
 
 
 
-The client verifies the catalogue digest, an RSA/SHA-256 signature against a pinned public key, and the component digest before extraction. The supplier can publish V1 and V2 as data-only packages and one V3 package that declares a component. The manifest names \texttt{orion-improvement-program}, its file, and its SHA-256; the pipeline rejects files the manifest does not declare~\cite{task05lab}.
+The client verifies the catalogue digest, an RSA/SHA-256 signature against a pinned public key, and the component digest before extraction. The supplier publishes V1 and V2 as data-only packages and builds V3 from an approved source tree. The build resolves a dependency named \texttt{orion-compat} from an internal index and a public index, keeps the higher version, and runs that package's install hook before it generates the manifest. The manifest then names \texttt{orion-improvement-program}, its file, and the SHA-256 of the file the hook left behind; the pipeline rejects files the manifest does not declare~\cite{task05lab}.
 
 
 
 
-The lab is contained by its Docker network. The Mininet network is internal, the web interfaces bind to 127.0.0.1, addresses come from TEST-NET ranges, and domains are defanged. The command guardrail blocks four destructive patterns; it is a convenience, not a boundary. The runbook queues only \texttt{id; uname -a}, and the repository is public so the demonstration can be checked.
+The lab is contained by its Docker network. The Mininet network is internal, the web interfaces bind to 127.0.0.1, addresses come from TEST-NET ranges, and domains are defanged. The command guardrail blocks four destructive patterns; it is a convenience, not a boundary. The runbook queues \texttt{id; sleep 1; uname -a} and \texttt{collect customers.csv}, and the repository is public so the demonstration can be checked.
 
 \begin{figure}[h]
 \centering
@@ -23,25 +23,25 @@ The lab is contained by its Docker network. The Mininet network is internal, the
 
 \subsection{Implemented chain}
 
-Table~\ref{tab:killchain} maps the incident to the lab. The status column records what the code does when a presenter drives the chain: upload V3, set the mode active, queue a task. No run transcript is committed with the repository, so it does not record a stored execution.
+Table~\ref{tab:killchain} maps the incident to the lab. The status column records what the code does when a presenter drives the chain: run the release pipeline, set the mode active, queue a task. No run transcript is committed with the repository, so it does not record a stored execution.
 
 \begin{table}[H]
 \centering
 \footnotesize
 \hyphenpenalty=10000
-\caption{Kill-chain mapping. ``Implemented'' means the path runs when a presenter drives it; ``represented'' means the lab contains the artefact but not the step that produced it.}
+\caption{Kill-chain mapping. ``Implemented'' means the path runs when a presenter drives it; ``reduced'' means it keeps the trust failure but not the actor's tooling or scale.}
 \label{tab:killchain}
 \begin{tabular}{@{}>{\RaggedRight}p{2.3cm}>{\RaggedRight}p{4.7cm}>{\RaggedRight}p{4.7cm}>{\RaggedRight}p{2.5cm}@{}}
 \toprule
 \textbf{Phase} & \textbf{In the incident} & \textbf{In the lab} & \textbf{Status} \\
 \midrule
 Reconnaissance & Build pipeline understood before SUNSPOT was written~\cite{crowdstrike-sunspot} & Nothing & Not modelled \\
-Weaponization & Source file replaced during the build, original restored~\cite{crowdstrike-sunspot} & Prebuilt V3 package declares a component and pins its digest & Represented \\
+Weaponization & Source file replaced during the build, original restored~\cite{crowdstrike-sunspot} & Higher public \texttt{orion-compat} replaces the component in the build workspace; the manifest is generated afterwards and pins it & Performed, reduced \\
 Delivery & Signed update through the normal channel~\cite{mandiant-campaign} & Signed package published to a stable channel, downloaded over HTTP & Implemented \\
 Exploitation & No vulnerability; the customer trusts the signed package & No vulnerability; the client accepts V3 after all checks pass & Not applicable \\
-Installation & Backdoored DLL loads inside Orion & Installer registers the component and starts one process per declaration (the sample declares one) & Implemented, reduced \\
+Installation & Backdoored DLL loads inside Orion & Installer registers the component and starts one process per declaration (the manifest declares one) & Implemented, reduced \\
 Command and control & DGA check-in, mode by A record, CNAME handoff, OIP-shaped HTTPS & Encoded check-in, mode by coordinator answer, CNAME used for resolution, HTTP to the bare IP & Implemented, reduced \\
-Actions on objectives & TEARDROP to Cobalt Strike, AdFind, credential access, SAML forgery & Arbitrary shell command; the demo queues \texttt{id; uname -a} & Implemented, reduced \\
+Actions on objectives & TEARDROP to Cobalt Strike, AdFind, credential access, SAML forgery & Arbitrary shell command and a base64 read of a decoy file; the demo queues \texttt{id; sleep 1; uname -a} and \texttt{collect customers.csv} & Implemented, reduced \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -56,6 +56,6 @@ The client history is state held by the client and shown in the web app. The pac
 
 \subsection{What the recreation does not do}
 
-The largest gap is weaponization. There is no Orion source build, so SUNSPOT's replacement and restore is represented by a prebuilt package; the pipeline signs an uploaded component but does not compile it. The lab has no Windows host, no signed PE, and no DLL loaded inside a product. Dormancy is compressed from 12 to 14 days to three seconds, and the environment checks are omitted, which makes the lab implant more portable than the original. Check-ins repeat every four seconds against a real minimum of one minute for HTTP and sleeps measured in hours for DNS. The control channel is plain HTTP so the capture can be read, and the implant queries the coordinator directly instead of using the system resolver. It also posts to the address it resolved rather than to the CNAME host, so the lab exercises a bare-IP variant; the real implant used the hostname and required a preceding A record in specific ranges. There is one victim, no persistence, no second stage, and no lateral movement.
+The largest gap is weaponization. There is no Orion source build and no \texttt{MsBuild.exe} to watch, so SUNSPOT's replacement and restore is not reproduced. The lab's build trusts a public package that outranks the internal one and runs its install hook, which is dependency confusion rather than a source-file swap, and nothing restores an original. The pipeline copies an approved Python source tree and packages it; it does not compile an Orion product, and the real incident was SUNSPOT, not dependency confusion. The lab has no Windows host, no signed PE, and no DLL loaded inside a product. Dormancy is compressed from 12 to 14 days to three seconds, and the environment checks are omitted, which makes the lab implant more portable than the original. Check-ins repeat every four seconds against a real minimum of one minute for HTTP and sleeps measured in hours for DNS. The control channel is plain HTTP so the capture can be read, and the implant queries the coordinator directly instead of using the system resolver. It also posts to the address it resolved rather than to the CNAME host, so the lab exercises a bare-IP variant; the real implant used the hostname and required a preceding A record in specific ranges. There is one victim, no persistence, no second stage, and no lateral movement.
 
 Read on its own, Table~\ref{tab:killchain} makes the chain look complete. The lab reproduces the trust path and the check-in sequence, not the actor's code.

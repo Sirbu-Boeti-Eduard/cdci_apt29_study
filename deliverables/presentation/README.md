@@ -26,4 +26,4 @@ Then open <http://localhost:8000>. Keys: arrows or space to move, `n` for speake
 | `index.html` | Entry point |
 | `deck.pdf` | Exported slides |
 
-Facts and figures match `deliverables/report/main.tex` as of 25 November 2026. If one changes, change the other.
+Facts and figures match `deliverables/report/main.tex` as of 26 November 2026. If one changes, change the other.

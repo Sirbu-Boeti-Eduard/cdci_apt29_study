@@ -167,7 +167,7 @@ Transition: which leaves the question we built the lab around.`,
     support: "Not because a check was bypassed. The catalogue digest, the RSA signature and the component digest all verify. The failure is in what the signature is asked to prove.",
     note: `Target timing: 90 seconds.
 
-This is the pivot. We did not rebuild SUNBURST; we rebuilt the trust failure around it. A supplier signs a package that carries code, and a client verifies it correctly.
+This is the pivot. We did not rebuild SUNBURST; we rebuilt the trust failure around it. A supplier signs a package that carries code, and a client verifies it correctly. The lab's build performs a dependency-confusion swap, not SUNSPOT's source-file replacement, but the signed package still comes from the supplier's own pipeline.
 
 If someone asks whether we broke the verification, the answer is no, and that is the point.
 
@@ -223,12 +223,12 @@ Transition: so we built the smallest thing that could prove the claim.`,
   <text x="722" y="196" font-size="17" font-weight="600" fill="#17212b">receiver · 10.0.0.4:9000</text>
   <text x="722" y="218" font-size="14" fill="#5a5449">OIP-shaped POST, tasking</text>
 
-  <rect x="2" y="250" width="432" height="60" fill="#f2ecdf" stroke="#cfc6b4" stroke-width="1"/>
-  <text x="24" y="272" font-size="14" font-weight="600" fill="#17212b">pipeline · client · attacker console</text>
-  <text x="24" y="292" font-size="14" font-weight="600" fill="#17212b">presenter · defender</text>
-  <text x="24" y="310" font-size="12" fill="#5a5449">localhost:8080–8084, outside the Mininet wire</text>
+  <rect x="2" y="242" width="432" height="72" fill="#f2ecdf" stroke="#cfc6b4" stroke-width="1"/>
+  <text x="24" y="264" font-size="14" font-weight="600" fill="#17212b">pipeline · client · attacker console</text>
+  <text x="24" y="284" font-size="14" font-weight="600" fill="#17212b">presenter · defender · package index</text>
+  <text x="24" y="302" font-size="12" fill="#5a5449">localhost:8080–8085, outside the Mininet wire</text>
 
-  <line x1="218" y1="250" x2="218" y2="180" stroke="#5a5449" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <line x1="218" y1="242" x2="218" y2="180" stroke="#5a5449" stroke-width="1.5" stroke-dasharray="4 4"/>
   <line x1="218" y1="180" x2="242" y2="180" stroke="#5a5449" stroke-width="1.5" stroke-dasharray="4 4"/>
 </svg>`,
     note: `Target timing: 90 seconds.
@@ -237,7 +237,7 @@ Orient the room in one pass, left to right: the victim, the bridge, the switch, 
 
 That design choice is the argument. Every detection claim is about the wire, not about logs the lab wrote for itself.
 
-The bottom box is the web interface: five small apps outside the Mininet network.
+The bottom box is the web interface: six small apps outside the Mininet network.
 
 Transition: here is the install the lab produced.`,
   },
@@ -245,7 +245,7 @@ Transition: here is the install the lab produced.`,
     kind: "checks",
     kicker: "EVIDENCE",
     title: "Every check passed",
-    lead: "The manifest declares the component, and the pipeline signed exactly those bytes, so the digest describes the file it names. The client history records found, downloaded, verified, installed, then the registered component.",
+    lead: "The build generates the manifest after the install hook runs, so it pins the swapped file and the pipeline signs exactly those bytes. The client history records found, downloaded, verified, installed, then the registered component.",
     checks: [
       { label: "Catalogue digest", detail: "The package matches the digest published in the catalogue." },
       { label: "RSA signature", detail: "Verified with openssl against a pinned public key the client cannot write." },
@@ -256,7 +256,7 @@ Transition: here is the install the lab produced.`,
 
 Walk the three checks in order. The key is pinned and the client cannot write it, so there is no local bypass.
 
-The component digest is the one to point at: 28cbdfb0, ending 61810. The client history shows found, downloaded, verified, installed, then the registered component.
+The component digest is the one to point at: 28cbdfb0, ending 61810, the hash of the file the install hook left in the workspace. The approved source component hashes to 55f86d90; the build log shows the public 2.0.0 won and the manifest pins 28cb after the hook. The client history shows found, downloaded, verified, installed, then the registered component.
 
 If asked for proof: the package and manifest are in tasks/task05-poc, and the playbook and runbook describe how to produce the capture and sensor state. No run output is committed, so do not claim one is.
 
@@ -265,21 +265,21 @@ Transition: and here is what we did not build.`,
   {
     kind: "table",
     kicker: "SCOPE",
-    title: "Implemented, represented, or absent",
+    title: "What runs, what is reduced, what is absent",
     head: ["Kill-chain phase", "In the lab", "Status"],
     rows: [
       ["Reconnaissance", "Nothing", "Not modelled"],
-      ["Weaponization", "A prebuilt V3 package pins a component digest", "Represented"],
+      ["Weaponization", "Higher public orion-compat replaces the component before signing", "Performed, reduced"],
       ["Delivery", "Signed package, stable channel, HTTP download", "Implemented"],
       ["Exploitation", "No vulnerability; the client trusts the signed package", "Not applicable"],
       ["Installation", "Installer registers the component and starts it", "Implemented, reduced"],
       ["Command and control", "Encoded check-in, mode by answer, CNAME for resolution, POST", "Implemented, reduced"],
-      ["Actions on objectives", "One optional, benign shell command and its output", "Implemented, reduced"],
+      ["Actions on objectives", "One optional benign shell command, plus a decoy-file read", "Implemented, reduced"],
     ],
     statement: "The lab reproduces the trust path and the check-in, not the actor's code.",
     note: `Target timing: 70 seconds.
 
-This is the honesty slide, and it is deliberately brief. Weaponization is represented, not performed: there is no build system. Reconnaissance is absent. Exploitation is not applicable because there is no vulnerability.
+This is the honesty slide, and it is deliberately brief. Weaponization is performed, but reduced: the build trusts a higher public dependency and runs its install hook, which is dependency confusion, not SUNSPOT's source-file swap. Reconnaissance is absent. Exploitation is not applicable because there is no vulnerability.
 
 Delivery and installation are implemented and run when the presenter drives them. Tasking is reduced: one process, one command, no persistence.
 
@@ -288,19 +288,19 @@ Transition: so what did the defender see?`,
   {
     kind: "bullets",
     kicker: "DETECTION",
-    title: "Seven rules, six tied to this lab",
-    lead: "The sensor decodes the check-in label, measures the interval, records first contact and flags the upload. Five rules are reachable in a demo; the self-test exercises the other two. None was tested against a benign baseline.",
+    title: "Eight rules, six tied to this lab",
+    lead: "The sensor decodes the check-in label, measures the interval, records first contact and flags the upload. Eight rules are defined and six fire in a demo; the self-test exercises the other two.",
     items: [
-      { head: "What can be recovered", text: "The check-in is decodable and periodic once captured, and the upload is visible on the wire." },
-      { head: "What proves less than it looks", text: "Six of seven rules key on lab constants: the check-in suffix, a periodicity threshold, or the POST path, agent and destination. Only first-contact is generic, and it fires on the benign update." },
+      { head: "What can be recovered", text: "The check-in is decodable and periodic once captured, the upload is visible on the wire, and a /proc sensor shows the component and its child process." },
+      { head: "What proves less than it looks", text: "Six of eight rules key on lab constants: the check-in suffix, a periodicity threshold, or the POST path, agent and destination. First contact and the 4 KB upload threshold are generic; first contact fires on the benign update." },
       { head: "The signal we did not implement", text: "Mandiant rates a CNAME resolution above a decoded label; none of our rules alerts on the CNAME response." },
-      { head: "The honest limit", text: "No benign baseline was run, so the rule set shows what can be recovered, not what a defender should prioritise." },
+      { head: "The honest limit", text: "No benign DNS workload was run, so the rule set shows what can be recovered, not what a defender should prioritise." },
     ],
     note: `Target timing: 120 seconds.
 
-Do not oversell. Five of seven rules are reachable, and none has been run against benign traffic.
+Do not oversell. Six of eight are reachable in the demo, and the only benign traffic is the updater's own poll, which first contact flags as new.
 
-The checksum rule proves the lab's encoder ran, nothing more. Three rules depend on constants we chose.
+The checksum rule proves the lab's encoder ran, nothing more. Six of the eight rules depend on constants we chose.
 
 Then the concession that buys credibility: Mandiant says the CNAME answer is the stronger signal, and our rules watch the label instead.
 
