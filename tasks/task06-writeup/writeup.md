@@ -1,6 +1,6 @@
 # Attack write-up: the SolarWinds build compromise in a Mininet lab
 
-Draft for the CDCI Assignment 1 report. It describes the attack steps of the SolarWinds supply-chain compromise attributed to APT29, then the subset of those steps recreated in `tasks/task05-poc`, and where the two differ. The lab code is at commit `7c99000`. Operating instructions live in `playbook.md` and `demo-runbook.md`; this file is the graded narrative, not a manual.
+Draft for the CDCI Assignment 1 report. It describes the attack steps of the SolarWinds supply-chain compromise attributed to APT29, then the subset of those steps recreated in `tasks/task05-poc`, and where the two differ. The lab code is in `tasks/task05-poc` (Task 5 work, PR #10). Operating instructions live in `playbook.md` and `demo-runbook.md`; this file is the graded narrative, not a manual.
 
 ## 1. What the actor did
 
@@ -12,19 +12,19 @@ Active C2 imitated the Orion Improvement Program, with JSON documents under 10,0
 
 ## 2. The lab
 
-The lab is one Mininet network inside a Docker container: an updater, a DNS coordinator and an HTTP receiver on a switch, and a victim whose only link to the switch crosses a bridging sensor. A separate pipeline signs releases, and five small web apps expose the supplier, the client, the operator, the presenter and the defender. The supplier publishes V1 and V2 as data-only packages and can publish one V3 package that declares a component. The client verifies the catalog digest, an RSA/SHA-256 signature with a pinned public key, and the component digest, then extracts the component and starts it as a process. `topology.py` runs `tcpdump` on the bridge, and `sensor.py` reads that capture file.
+The lab is one Mininet network inside a Docker container: an updater, a DNS coordinator and an HTTP receiver on a switch, and a victim whose only link to the switch crosses a bridging sensor. A separate pipeline builds and signs releases, and six small web apps expose the release pipeline, the client, the operator, the presenter dashboard, the defender, and the public package index. The supplier publishes V1 and V2 as data-only packages and builds one V3 package from an approved source tree. The build resolves `orion-compat` from an internal index and a public index, runs the higher public package's install hook, then generates the manifest from the workspace, so the component digest, package digest, and signature all cover the injected file. The client verifies the catalog digest, an RSA/SHA-256 signature with a pinned public key, and the component digest, then extracts the component and starts it as a process. `topology.py` runs `tcpdump` on the bridge, and `sensor.py` reads that capture file.
 
 ## 3. Kill-chain mapping
 
 | Phase | Actor, per reporting | Lab | Status |
 | --- | --- | --- | --- |
 | Reconnaissance | Build chain understood before SUNSPOT was written [2] | Nothing | Not modelled |
-| Weaponization | Source file replaced during the build, original restored after [2] | A prebuilt V3 package declares a component and pins its digest | Represented, not performed |
+| Weaponization | Source file replaced during the build, original restored after [2] | The build resolves a higher public `orion-compat`, whose install hook replaces `orion_support.py`; the manifest is generated afterwards and pins the injected file | Performed, reduced (dependency confusion, not SUNSPOT) |
 | Delivery | Signed update distributed through the normal channel [1] | Signed package published to a stable channel and downloaded over HTTP | Executed |
 | Exploitation | Customer installs the update | Client verifies and installs V3 | Executed |
 | Installation | Backdoored DLL loads inside the Orion process | Installer registers the declared component and starts one process | Executed, reduced |
 | Command and control | DGA check-in, mode by A record, CNAME handoff, OIP-shaped HTTPS | Encoded check-in, mode by coordinator answer, CNAME handoff, HTTP POST | Executed, reduced |
-| Actions on objectives | TEARDROP to Cobalt Strike, AdFind, credential access, SAML forgery [3][4] | One shell command and its output | Executed, reduced |
+| Actions on objectives | TEARDROP to Cobalt Strike, AdFind, credential access, SAML forgery [3][4] | One shell command and its output, plus a `collect` command that base64-encodes a decoy file | Executed, reduced |
 
 ## 4. Step notes
 
@@ -32,7 +32,7 @@ The lab is one Mininet network inside a Docker container: an updater, a DNS coor
 
 SUNSPOT ran as `taskhostsvc.exe`, persisted through a scheduled task, watched for `MsBuild.exe`, read the build command line out of the process memory, and replaced `InventoryManager.cs` with a backdoored copy while keeping the original as a `.bk` file. It checked MD5 hashes first, wrapped its edits in `#pragma warning disable`, and restored the original after the build exited, so the repository looked untouched [2].
 
-The lab does not have a build system. The V3 package is assembled out of band and uploaded, and the manifest names `orion-improvement-program`, its file and its SHA-256. The pipeline validates that the zip contains exactly the declared files, checks each digest, and signs the package. This is the compromise represented as an artifact rather than performed as a build step. It is the largest difference between the lab and the incident, and the reason the write-up does not claim to reproduce SUNSPOT.
+The lab performs a build-time swap, but a different one. `pipeline/src/` holds the approved source. The build copies it into a workspace, resolves `orion-compat` from an internal index (`1.4.2`) and a public index, and chooses the highest version. Publishing `orion-compat 2.0.0` publicly makes the build download that package and run its install hook, which replaces `orion_support.py` with the component the package ships. The manifest is generated after the hook, so it names `orion-improvement-program`, pins its file and SHA-256, and the signature covers the result. The pipeline then packages, signs, and publishes. This is dependency confusion, not SUNSPOT's source-file swap during the build, and the build does not restore the original file. The real incident was SUNSPOT, not dependency confusion. SUNSPOT itself remains represented, not performed. It is the largest difference between the lab and the incident, and the reason the write-up does not claim to reproduce SUNSPOT.
 
 ### 4.2 Delivery and verification
 
@@ -42,7 +42,7 @@ Two reductions: the real update was a signed DLL loaded by a running product, wh
 
 ### 4.3 Dormancy
 
-The real implant waited 12 to 14 days, required an AD domain, and stopped when it found analysis tools [1]. The lab component starts three seconds after installation and performs no environment checks. The compression is deliberate, and so is the omission: the lab implant would run on any host, which is a capability the real one did not have.
+The real implant waited 12 to 14 days, required an AD domain, and stopped when it found analysis tools [1]. The installed component starts at once, waits three seconds, then sends its first check-in, and performs no environment checks. The compression is deliberate, and so is the omission: the lab implant would run on any host, which is a capability the real one did not have.
 
 ### 4.4 Check-in and mode selection
 
@@ -60,7 +60,7 @@ The lab posts to `/swip/upd/orion.improvementprogram.asmx` with `Orion/2020.2.4 
 
 ### 4.6 Tasking and actions on objectives
 
-The real command set covered process execution, file read and write, registry operations, hashing and reboot [1]. The lab runs one shell command per task with `/bin/sh -lc`, returns the exit code and output, and blocks destructive patterns with a guardrail. That is enough to show tasking over the same channel the beacon uses, and not enough to claim post-exploitation.
+The real command set covered process execution, file read and write, registry operations, hashing and reboot [1]. The lab runs one shell command per task with `/bin/sh -lc`, returns the exit code and output, and blocks destructive patterns with a guardrail. A `collect customers.csv` command expands to `base64 -w0` on a decoy file in the victim, and the encoded result returns in the same telemetry block; the large upload trips `T5-EXFIL-001`. That is enough to show tasking and data theft over the same channel the beacon uses, and not enough to claim post-exploitation.
 
 ### 4.7 Follow-on
 
@@ -73,7 +73,7 @@ None of this is in the lab. There is one victim, no Windows host and no second s
 | Software | Role in reporting | In the lab |
 | --- | --- | --- |
 | SUNBURST | Backdoor in the signed Orion DLL [1][4] | Behaviour reimplemented as a Python component |
-| SUNSPOT | Build-time source replacement [2] | Not reproduced; the tampered artifact is uploaded by hand |
+| SUNSPOT | Build-time source replacement [2] | Not reproduced; a dependency-confusion build runs an install hook that swaps the component, without SUNSPOT's source-file swap and restore |
 | TEARDROP | Memory-only loader for Cobalt Strike Beacon [3] | Not reproduced |
 | Raindrop | Loader variant using AES-256, LZMA and XOR [3] | Not reproduced |
 | Cobalt Strike | Post-exploitation framework reached through the loaders [3][4] | Not reproduced |
@@ -84,27 +84,27 @@ No binary belonging to the actor, and no licensed tool, was run in this lab. Wha
 
 ## 6. Detection and response
 
-The sensor reads the capture file that the tap writes. It does not read the DNS log, the receiver log or the beacon list, and it does not know the scenario phase. Seven rules are defined; five can fire in the current single-host lab. `T5-DGA-003` needs a hand-made lookalike, and `T5-DGA-004` needs a second source address, so neither appears in a normal run. `T5-DGA-002` imports the same encoder as the payload, so a valid checksum proves the lab's encoder ran, not that an unknown implant is present. The honest claim is that the check-in is decodable and periodic once captured, not that the rules would find SUNBURST.
+The sensor reads the capture file that the tap writes. It does not read the DNS log, the receiver log or the beacon list, and it does not know the scenario phase. A separate host sensor reads `/proc` and records the component and its child processes; it is not a packet rule and does not read the service logs. Eight rules are defined; six are reachable in the demo. `T5-DGA-003` needs a hand-made lookalike, and `T5-DGA-004` needs a second source address, so neither appears in a normal run. `T5-DGA-002` imports the same encoder as the payload, so a valid checksum proves the lab's encoder ran, not that an unknown implant is present. The honest claim is that the check-in is decodable and periodic once captured, not that the rules would find SUNBURST.
 
-Mandiant's incident-response note is that CNAME resolutions are a stronger signal than DGA decoding, because a decoded domain only shows the backdoor was present [1]. The lab shows the handoff in the operator console and the capture, but its seven rules still key on the encoded label. In that sense the lab demonstrates the weaker signal that Mandiant cautions against, and the write-up should say so rather than present the rule set as best practice.
+Mandiant's incident-response note is that CNAME resolutions are a stronger signal than DGA decoding, because a decoded domain only shows the backdoor was present [1]. The lab shows the handoff in the operator console and the capture, but its rules still key on the encoded label. In that sense the lab demonstrates the weaker signal that Mandiant cautions against, and the write-up should say so rather than present the rule set as best practice.
 
 Two response actions change real state. A resolver block makes the coordinator answer NXDOMAIN, and the component sends one final mode-3 check-in and exits. Tap isolation installs a `tc` egress filter on the switch-side bridge port, so the victim's frames stop reaching the network while the capture keeps recording them. Both are reversible, and the lab refuses to change the coordinator mode while a block is active.
 
 ## 7. Limits
 
-- No build system, so no SUNSPOT-style replacement and restore.
+- A build system is present, but it performs a dependency-confusion swap, not SUNSPOT-style replacement and restore.
 - No Windows host, no signed PE, no DLL loading inside a product.
 - No TLS, no steganography, and OIP fields that are analogous rather than identical.
 - No 12 to 14 day dormancy and no environment checks.
 - No persistence. The component lives in a work directory and dies with the container.
-- No second stage, no lateral movement, no credential access, no collection.
-- One victim, so two detection rules cannot fire and the reuse rule is untested.
+- No second stage, no lateral movement, no credential access, and no real collection; the `collect` command reads a decoy file.
+- One victim, so the reuse rule cannot fire and the lookalike rule needs a hand-made query; neither appears in a normal run.
 - The lab's DNS is a purpose-built UDP server on the same subnet, not an authoritative server for a registered domain.
 
 ## 8. Evidence
 
-- Lab commit `7c99000`.
-- `pipeline/sample-v3-malicious.zip`, with payload, zip entry and pinned digest all `28cbdfb047c3eadceaf9ebb1d88b149ceb23cc405baacbca4d64b1b33a061810`.
+- Task 5 lab in `tasks/task05-poc` (PR #10).
+- Pipeline build logs from the demo run: the clean build resolves `orion-compat 1.4.2` from the internal index and pins component digest `55f86d90bda85b70`; after publishing `2.0.0`, the build resolves it from the public index and pins `28cbdfb047c3eadc`, the digest of `registry/payload/orion_support.py`.
 - Client update history lines for found, downloaded, verified, installed, and the registered component.
 - The capture at `/tmp/task05-poc/capture/c2-traffic.pcap` and the sensor snapshot at `/tmp/task05-poc/sensor/state.json`, both produced by the demo run.
 - Screenshots for the report still need to be taken from a rehearsal; none are in the repository yet.
