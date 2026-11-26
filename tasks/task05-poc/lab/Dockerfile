@@ -14,7 +14,7 @@ RUN apt-get update \
         tcpdump \
     && rm -rf /var/lib/apt/lists/*
 
-COPY api.py config.py dga.py scenario.py sensor.py state.py topology.py services.py /app/
+COPY api.py config.py dga.py host.py scenario.py sensor.py state.py topology.py services.py /app/
 
 EXPOSE 8080
 CMD ["python3", "/app/api.py"]

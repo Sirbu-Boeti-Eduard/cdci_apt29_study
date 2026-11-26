@@ -213,8 +213,8 @@ def _implant_module():
     """Import the implant's own encoder for the parity check."""
     here = Path(__file__).resolve()
     for candidate in (
+        here.parents[1] / "registry" / "payload" / "orion_support.py",
         here.parents[1] / "pipeline" / "payload" / "dga_implant.py",
-        here.parents[1] / "pipeline" / "payload" / "orion_support.py",
     ):
         if candidate.exists():
             source = candidate.read_text(encoding="utf-8")

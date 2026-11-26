@@ -9,6 +9,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 
 import config
+import host
 import scenario
 import sensor
 import state
@@ -36,6 +37,7 @@ def blue_state() -> dict[str, object]:
         "counters": snapshot.get("counters", {}),
         "suffix": sensor.CHECKIN_SUFFIX,
         "resolver": {"blocked": blocked, "previous_mode": previous, "mode": mode},
+        "host": host.snapshot(),
     }
 
 
@@ -181,9 +183,11 @@ def main() -> None:
     try:
         topology.start_mininet()
         topology.wait_for_services()
+        host.start()
         for path in (UPDATE_LOG, DNS_LOG, RECEIVER_LOG, RESULT_LOG):
             path.write_text("", encoding="utf-8")
         topology.start_capture()
+        scenario.ensure_sample_data()
         scenario.install_version("v2", "Initial client install", schedule_callback=False, record_history=False)
         append_history("Update agent started on V2; stable channel checked.")
         httpd = ThreadingHTTPServer(("0.0.0.0", 8080), LabApiHandler)

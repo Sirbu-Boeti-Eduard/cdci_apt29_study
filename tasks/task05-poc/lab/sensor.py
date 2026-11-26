@@ -68,6 +68,10 @@ RULES: tuple[dict[str, str], ...] = (
         "id": "T5-C2-002",
         "name": "Improvement Program upload to a bare IP",
     },
+    {
+        "id": "T5-EXFIL-001",
+        "name": "Large telemetry upload",
+    },
 )
 
 RULE_INDEX = {rule["id"]: rule for rule in RULES}
@@ -268,7 +272,7 @@ def parse_dns_response(payload: bytes) -> dict[str, object] | None:
     return {"name": name, "rcode": flags & 0x000F, "records": records}
 
 
-def parse_http_request(payload: bytes) -> dict[str, str] | None:
+def parse_http_request(payload: bytes) -> dict[str, object] | None:
     if not payload:
         return None
     head = payload.split(b"\r\n\r\n", 1)[0].decode("latin-1", errors="replace")
@@ -281,11 +285,16 @@ def parse_http_request(payload: bytes) -> dict[str, str] | None:
         field, separator, value = line.partition(":")
         if separator:
             headers[field.strip().lower()] = value.strip()
+    try:
+        content_length = int(headers.get("content-length", "0"))
+    except ValueError:
+        content_length = 0
     return {
         "method": match.group(1),
         "path": match.group(2),
         "host": headers.get("host", ""),
         "agent": headers.get("user-agent", ""),
+        "content_length": content_length,
     }
 
 
@@ -602,6 +611,22 @@ class Detector:
         if request["method"] != "POST" or _is_global(str(packet["dst"])):
             return
         agent = request["agent"]
+        length = int(request.get("content_length") or 0)
+        if length > 4096:
+            self.alert(
+                "T5-EXFIL-001",
+                ts,
+                packet,
+                frame,
+                f"POST {request['path']} carries {length} bytes",
+                f"{request['method']} {request['path']} · Content-Length: {length} · UA: {agent or '(none)'}",
+                [
+                    ["path", str(request["path"])],
+                    ["content length", str(length)],
+                    ["user-agent", agent or "(none)"],
+                ],
+                f"{packet['src']}|{packet['dst']}|{request['path']}|exfil",
+            )
         if TELEMETRY_PATH.search(request["path"]) is None and ORION_AGENT.match(agent) is None:
             return
         provenance = self.dns_answers.get(str(packet["dst"]), {})
@@ -795,9 +820,27 @@ def selftest() -> int:
     # Bare-IP HTTP check-in.
     request = b"POST /swip/upd/orion.improvementprogram.asmx HTTP/1.1\r\nHost: 10.0.0.4:9000\r\nContent-Type: application/json\r\nUser-Agent: Orion/2020.2.4 (Windows NT 10.0; Win64; x64)\r\n\r\n{}"
     detector.observe(base + 32, _ethernet("10.0.0.5", "10.0.0.4", 6, 41200, 9000, request))
+    # A large telemetry result, the shape a collect task produces.
+    upload = (
+        b"POST /swip/upd/orion.improvementprogram.asmx HTTP/1.1\r\n"
+        b"Host: 10.0.0.4:9000\r\n"
+        b"Content-Type: application/json\r\n"
+        b"Content-Length: 6000\r\n"
+        b"User-Agent: Orion/2020.2.4 (Windows NT 10.0; Win64; x64)\r\n\r\n"
+        + b"A" * 6000
+    )
+    detector.observe(base + 36, _ethernet("10.0.0.5", "10.0.0.4", 6, 41201, 9000, upload))
 
     fired = {alert["rule"] for alert in detector.alerts}
-    expected = {"T5-DGA-001", "T5-DGA-002", "T5-DGA-003", "T5-DGA-004", "T5-BCN-001", "T5-C2-002"}
+    expected = {
+        "T5-DGA-001",
+        "T5-DGA-002",
+        "T5-DGA-003",
+        "T5-DGA-004",
+        "T5-BCN-001",
+        "T5-C2-002",
+        "T5-EXFIL-001",
+    }
     problems: list[str] = []
     missing = expected - fired
     if missing:

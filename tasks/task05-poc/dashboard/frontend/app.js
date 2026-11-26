@@ -18,12 +18,37 @@ function renderContainers(containers) {
     : '<tr><td colspan="2">No running containers.</td></tr>';
 }
 
+const CHAIN_PORTS = {
+  build: '8080',
+  delivery: '8081',
+  install: '8081',
+  c2: '8082',
+  tasking: '8082',
+  detection: '8084',
+  response: '8084'
+};
+
+function renderKillchain(chain) {
+  const phases = chain && Array.isArray(chain.phases) ? chain.phases : [];
+  const done = phases.filter(phase => phase.state === 'done').length;
+  document.getElementById('chain-count').textContent = `${done}/${phases.length || 7}`;
+  document.getElementById('chain').innerHTML = phases.map((phase, index) => {
+    const port = CHAIN_PORTS[phase.id] || '8083';
+    return `<a class="phase ${escapeHtml(phase.state)}" href="http://${escapeHtml(location.hostname)}:${port}" target="_blank" rel="noopener">
+      <span class="phase-index">${String(index + 1).padStart(2, '0')}</span>
+      <span class="phase-label">${escapeHtml(phase.label)}</span>
+      <span class="phase-state">${escapeHtml(phase.state)}</span>
+    </a>`;
+  }).join('<span class="phase-arrow">›</span>');
+}
+
 async function refresh() {
   try {
     const response = await fetch('/api/state');
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'State unavailable');
     renderContainers(data.containers || []);
+    renderKillchain(data.killchain || {});
   } catch (error) {
     setMessage(error.message);
   }
@@ -51,4 +76,4 @@ document.getElementById('reset-lab').addEventListener('click', async () => {
 });
 
 refresh();
-setInterval(refresh, 2000);
+setInterval(refresh, 1500);

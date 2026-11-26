@@ -9,7 +9,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
 from urllib.request import ProxyHandler, build_opener
 
-from lab_client import call_lab, call_pipeline
+from lab_client import call_lab, call_pipeline, call_registry
 
 
 PORT = 8080
@@ -26,6 +26,7 @@ SERVICES = (
     ("client", "http://client:8080/health"),
     ("attacker", "http://attacker:8080/health"),
     ("blue", "http://blue:8080/health"),
+    ("registry", "http://registry:8080/health"),
     ("dashboard", "http://127.0.0.1:8080/health"),
     ("gateway", "http://gateway:8083/health"),
 )
@@ -47,6 +48,67 @@ def running_services() -> dict[str, object]:
         if _running(url)
     ]
     return {"containers": containers}
+
+
+CHAIN = (
+    ("build", "Build"),
+    ("delivery", "Delivery"),
+    ("install", "Installation"),
+    ("c2", "C2"),
+    ("detection", "Detection"),
+    ("tasking", "Tasking"),
+    ("response", "Response"),
+)
+
+
+def _safe(call, path: str) -> dict[str, object]:
+    try:
+        return call(path)
+    except RuntimeError:
+        return {}
+
+
+def killchain() -> dict[str, object]:
+    """Summarise the run as seven phases from the apps' own state."""
+    pipeline = _safe(call_pipeline, "/api/state")
+    client = _safe(call_lab, "/api/client-state")
+    attacker = _safe(call_lab, "/api/attacker-state")
+    blue = _safe(call_lab, "/api/blue-state")
+
+    releases = (pipeline.get("catalog") or {}).get("releases") or []
+    components = client.get("components") or []
+    beacons = attacker.get("beacons") or []
+    results = attacker.get("results") or []
+    alerts = blue.get("alerts") or []
+    resolver = blue.get("resolver") or {}
+    isolation = (blue.get("sensor") or {}).get("isolation") or {}
+
+    done = {
+        "build": any(isinstance(item, dict) and item.get("version") == "v3" for item in releases),
+        "delivery": client.get("version") == "v3",
+        "install": any(isinstance(item, dict) and item.get("status") == "running" for item in components),
+        "c2": bool(beacons) or bool(attacker.get("queries")),
+        "tasking": bool(results),
+        "detection": any(
+            isinstance(item, dict)
+            and not (item.get("rule") == "T5-C2-001" and item.get("dport") == 8000)
+            for item in alerts
+        ),
+        "response": bool(resolver.get("blocked")) or bool(isolation.get("active")),
+    }
+
+    phases: list[dict[str, object]] = []
+    current = False
+    for phase_id, label in CHAIN:
+        if done[phase_id]:
+            state = "done"
+        elif not current:
+            state = "next"
+            current = True
+        else:
+            state = "pending"
+        phases.append({"id": phase_id, "label": label, "state": state})
+    return {"phases": phases, "done": sum(done.values()), "total": len(CHAIN)}
 
 
 class DashboardHandler(BaseHTTPRequestHandler):
@@ -89,7 +151,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
         elif path == "/health":
             self.send_json(200, {"ready": True})
         elif path == "/api/state":
-            self.send_json(200, running_services())
+            state = running_services()
+            state["killchain"] = killchain()
+            self.send_json(200, state)
         else:
             self.send_json(404, {"error": "Not found."})
 
@@ -118,6 +182,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 notes.append(str(lab.get("message", "Lab reset.")))
             except RuntimeError as exc:
                 failures.append(f"Lab reset failed: {exc}")
+            try:
+                registry = call_registry("/api/reset", "POST", {}, presenter=True)
+                notes.append(str(registry.get("message", "Package index reset.")))
+            except RuntimeError as exc:
+                failures.append(f"Package index reset failed: {exc}")
             if failures:
                 self.send_json(400, {"error": " ".join(failures + notes)})
                 return

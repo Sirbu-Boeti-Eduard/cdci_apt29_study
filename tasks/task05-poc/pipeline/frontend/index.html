@@ -15,35 +15,33 @@
   </header>
   <main>
     <div class="page-heading">
-      <div><p class="eyebrow">RELEASE ENGINEERING</p><h1>Build &amp; Release</h1><p>Upload a build artifact, sign it, and publish it to the stable update channel.</p></div>
+      <div><p class="eyebrow">RELEASE ENGINEERING</p><h1>Build &amp; Release</h1><p>Run the release pipeline from the approved source and publish the signed build to the stable channel.</p></div>
       <div class="channel-pill"><span class="live-dot"></span>Stable · <strong id="channel-generation">Generation 1</strong></div>
     </div>
 
     <section class="card artifact-card">
-      <div class="section-heading"><div><p class="eyebrow">ARTIFACT</p><h2>Release artifact</h2></div><span id="artifact-state" class="state-pill">No artifact</span></div>
+      <div class="section-heading"><div><p class="eyebrow">RELEASE PIPELINE</p><h2>Build &amp; release</h2></div><span id="pipeline-state" class="state-pill">Idle</span></div>
       <div class="artifact-layout">
         <div class="artifact-form">
-          <label for="artifact-file">V3 package (.zip)</label>
-          <input id="artifact-file" type="file" accept=".zip,application/zip">
-          <button id="upload-artifact" class="secondary">Upload artifact</button>
+          <p class="hint">Checkout, build, manifest, package, sign, and publish from the approved source. Signing is a pipeline job.</p>
+          <label for="rollout">Publish target</label>
+          <select id="rollout"><option value="mandatory" selected>Stable · mandatory</option><option value="available">Stable · available</option></select>
+          <button id="run-pipeline" class="primary">Run release pipeline</button>
+          <p id="pipeline-message" class="message" role="status" aria-live="polite"></p>
+          <div class="pipeline-progress"><div id="pipeline-bar"></div></div>
           <dl class="artifact-meta">
             <div><dt>Source</dt><dd id="artifact-source">-</dd></div>
-            <div><dt>Artifact</dt><dd id="artifact-name">Not uploaded</dd></div>
+            <div><dt>Artifact</dt><dd id="artifact-name">Not built</dd></div>
             <div><dt>SHA-256</dt><dd id="artifact-digest">-</dd></div>
             <div><dt>Size</dt><dd id="artifact-size">-</dd></div>
             <div><dt>Signature</dt><dd id="artifact-signature">Not signed</dd></div>
           </dl>
-          <label for="rollout">Publish target</label>
-          <select id="rollout"><option value="mandatory" selected>Stable · mandatory</option><option value="available">Stable · available</option></select>
-          <div class="artifact-actions">
-            <button id="sign-artifact" class="warning">Sign artifact</button>
-            <button id="publish-artifact" class="primary">Publish to stable</button>
-          </div>
-          <p id="pipeline-message" class="message" role="status" aria-live="polite"></p>
         </div>
         <div>
+          <h3>Stages</h3>
+          <div id="pipeline-steps" class="pipeline-steps"></div>
           <h3>Manifest</h3>
-          <pre id="artifact-manifest">No artifact uploaded.</pre>
+          <pre id="artifact-manifest">No artifact yet.</pre>
         </div>
       </div>
     </section>

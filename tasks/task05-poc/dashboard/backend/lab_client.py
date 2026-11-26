@@ -10,6 +10,7 @@ from urllib.request import ProxyHandler, Request, build_opener
 
 LAB_URL = os.environ.get("LAB_URL", "http://lab:8080")
 PIPELINE_URL = os.environ.get("PIPELINE_URL", "http://pipeline:8080")
+REGISTRY_URL = os.environ.get("REGISTRY_URL", "http://registry:8080")
 DIRECT_HTTP = build_opener(ProxyHandler({}))
 
 
@@ -48,3 +49,13 @@ def call_pipeline(
 ) -> dict[str, object]:
     headers = {"X-Presenter-Request": "true"} if presenter else None
     return _call(PIPELINE_URL + path, method, payload, headers)
+
+
+def call_registry(
+    path: str,
+    method: str = "GET",
+    payload: dict[str, object] | None = None,
+    presenter: bool = False,
+) -> dict[str, object]:
+    headers = {"X-Presenter-Request": "true"} if presenter else None
+    return _call(REGISTRY_URL + path, method, payload, headers)

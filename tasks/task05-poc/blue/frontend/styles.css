@@ -214,3 +214,8 @@ tr.empty td {
   .controls { margin-left: 0; }
   .message { display: none; }
 }
+.role { display: inline-block; padding: 1px 5px; border: 1px solid var(--line); color: var(--muted); font: 9px var(--mono); text-transform: uppercase; letter-spacing: .08em; }
+.role.component { color: var(--cyan); border-color: #2f6f8c; }
+.role.launcher { color: var(--red); border-color: #5c2f2f; }
+.role.child { color: var(--text); }
+.cmd { white-space: normal; overflow-wrap: anywhere; color: var(--muted); font: 10px var(--mono); }
