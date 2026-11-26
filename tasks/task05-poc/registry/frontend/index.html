@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>orion-packages · public index</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="mark">P</span><div><strong>orion-packages</strong><small>PUBLIC PACKAGE INDEX</small></div></div>
+    <span class="badge">attacker-controlled</span>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">DEPENDENCY CONFUSION</p>
+      <h1>Publish a package</h1>
+      <p>The Orion build resolves <code>orion-compat</code> from the highest version across its internal index and this public index. The internal index has <strong>1.4.2</strong>. Publish <strong>2.0.0</strong> here and the build will prefer it.</p>
+    </section>
+
+    <section class="panel">
+      <form id="publish-form">
+        <label>Package name<input id="package-name" value="orion-compat" autocomplete="off" spellcheck="false"></label>
+        <label>Version<input id="package-version" value="2.0.0" autocomplete="off" spellcheck="false"></label>
+        <label class="wide">Description<input id="package-description" value="Compatibility shim for Orion service health" autocomplete="off" spellcheck="false"></label>
+        <button type="submit">Publish package</button>
+      </form>
+      <p id="message" class="message" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head"><h2>Published packages</h2><span id="count" class="count">0</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>package</th><th>version</th><th>description</th><th>published</th><th>downloads</th><th>archive</th></tr></thead>
+          <tbody id="packages"><tr><td colspan="6">No packages yet.</td></tr></tbody>
+        </table>
+      </div>
+      <p class="note">Internal index: <code>orion-compat 1.4.2</code> (clean). This index is not trusted by the story; it is the attacker's copy.</p>
+    </section>
+  </main>
+</body>
+</html>

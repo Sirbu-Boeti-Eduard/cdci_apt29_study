@@ -11,5 +11,7 @@ WORKDIR /app
 
 COPY backend/ /app/backend/
 COPY frontend/ /app/frontend/
+COPY build/build_release.py /app/build/
+COPY src/ /app/src/
 EXPOSE 8080
 CMD ["python", "/app/backend/server.py"]

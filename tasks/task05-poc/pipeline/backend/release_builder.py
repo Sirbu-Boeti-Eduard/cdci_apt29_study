@@ -209,6 +209,10 @@ def initialize_channel(release_dir: Path) -> list[str]:
     staging = release_dir / STAGING_DIR
     shutil.rmtree(staging, ignore_errors=True)
     staging.mkdir(parents=True, exist_ok=True)
+    try:
+        (release_dir / "build-record.json").unlink()
+    except FileNotFoundError:
+        pass
     log = [
         "Stable release channel initialized",
         "Orion Network Manager release pipeline online",
@@ -336,6 +340,10 @@ def upload_artifact(release_dir: Path, filename: str, content: bytes) -> tuple[d
     digest = hashlib.sha256(content).hexdigest()
     artifact_name = f"orion-v3-{digest[:16]}.zip"
     staging, meta_path = _staging_paths(release_dir)
+    try:
+        (release_dir / "build-record.json").unlink()
+    except FileNotFoundError:
+        pass
     shutil.rmtree(staging, ignore_errors=True)
     staging.mkdir(parents=True, exist_ok=True)
     _atomic_write(staging / artifact_name, content)
@@ -421,7 +429,8 @@ def publish_artifact(release_dir: Path, rollout: str) -> tuple[dict[str, Any], l
     releases.append(entry)
     generation = int(catalog.get("generation", 0)) + 1
     _write_catalog(release_dir, releases, generation)
-    shutil.rmtree(staging, ignore_errors=True)
+    # Keep staging until reset so the app can still show the signed artifact and
+    # its manifest after publishing.  initialize_channel clears it.
     log = [
         f"Catalog generation {generation} prepared",
         f"Published {artifact_name} to stable ({rollout})",

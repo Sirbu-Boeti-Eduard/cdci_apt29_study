@@ -78,6 +78,29 @@
 
     <section class="panel">
       <div class="panel-head">
+        <h2>host processes</h2>
+        <span class="count" id="host-count">0</span>
+      </div>
+      <div class="table-wrap">
+        <table class="host">
+          <colgroup>
+            <col style="width:72px">
+            <col style="width:60px">
+            <col style="width:60px">
+            <col style="width:72px">
+            <col style="width:88px">
+            <col>
+          </colgroup>
+          <thead>
+            <tr><th>seen</th><th>pid</th><th>ppid</th><th>user</th><th>role</th><th>command</th></tr>
+          </thead>
+          <tbody id="host"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
         <h2>decoded check-ins</h2>
         <span class="count" id="decode-count">0</span>
       </div>
