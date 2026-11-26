@@ -10,6 +10,8 @@ The original assignment brief is included at the repository root: [APT group att
 
 ## 2. Colleagues and Team
 
+Eduard Cristian, Georgiana-Iuliana, Mihai-Carol, Emna, Teodor-Alexandru.
+
 ## 3. Project Directories and Structure
 
 ```text

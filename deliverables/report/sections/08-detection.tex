@@ -1,8 +1,32 @@
-\section{Detection and response}
+\section{Detection}
 \label{sec:detection}
 
-The sensor reads the capture file the tap writes. It does not read the DNS log, the receiver log, or the scenario state. Eight rules are defined and six are reachable in the demo; the other two need a hand-made lookalike domain or a second source address. Six of the eight rules key on lab-specific constants: four on the check-in suffix, one on the suffix plus a periodicity threshold, and one on the POST path, agent string and a non-global destination. \texttt{T5-C2-001} is generic and fires on the first contact with any new destination, including the benign update download; \texttt{T5-EXFIL-001} keys on a POST size above 4 KB to a non-global address, not on a lab name. A separate host sensor reads \texttt{/proc} and records the component and its child processes; it is not a packet rule and does not read the service logs. One rule reuses the lab's own \texttt{dga.decode\_label}, the same algorithm and fixed key as the implant, so a valid checksum shows that the lab's encoder ran, not that an unknown implant is present.
+The sensor reads the capture file the tap writes. Its rules inspect packets, not the DNS log, receiver log, or scenario state. A separate host sensor polls \texttt{/proc} every 250 ms, follows parent PIDs, and records start and stop events for the component and its descendants, including pid, user, role and command line. The Blue Team app lists those events beside the packet rules.
 
-The claim the lab supports is narrower than ``the rules detect SUNBURST''. The check-in is decodable and periodic once captured, and the telemetry upload is visible on the wire. Mandiant rates a CNAME resolution above a decoded DGA label, because a decoded label shows only that the implant ran, while a CNAME can indicate follow-on command and control; the CNAME also requires a preceding A record in specific ranges~\cite{mandiant-sunburst-details}. The sensor parses CNAME records for DNS provenance, but no rule alerts on one. Four rules key on the label, \texttt{T5-BCN-001} on the suffix, and \texttt{T5-C2-002} on the upload path, agent and destination; first contact and the upload size threshold are the generic pair. The rule set shows what the lab's own key makes recoverable, not what a defender should prioritise.
+Table~\ref{tab:rules} lists the eight rules. Five run on the default demo; \texttt{T5-EXFIL-001} needs the optional collect task, and the self-test covers the lookalike and replay cases.
 
-The two response actions change lab state, not just the display. A resolver block makes the coordinator answer NXDOMAIN, and the implant sends one final mode-3 check-in and exits. Tap isolation installs an egress filter on the switch-side bridge port, so the victim's frames stop reaching the network while the capture keeps recording them. The resolver block is reversible in configuration but not in effect: the implant exits, and only a reinstall brings it back. Tap isolation is reversible. The console rejects a mode change while a block is active.
+\begin{table}[H]
+\centering
+\footnotesize
+\hyphenpenalty=10000
+\caption{Sensor rules and the traffic each one inspects.}
+\label{tab:rules}
+\begin{tabular}{@{}>{\RaggedRight}p{2.2cm}>{\RaggedRight}p{6.4cm}>{\RaggedRight}p{2.7cm}>{\RaggedRight}p{2.8cm}@{}}
+\toprule
+\textbf{Rule} & \textbf{Signal} & \textbf{Source} & \textbf{Coverage} \\
+\midrule
+\texttt{T5-DGA-001} & Encoded label under the check-in suffix & DNS query & Demo \\
+\texttt{T5-DGA-002} & Label decodes with a valid CRC-16 & DNS query & Demo \\
+\texttt{T5-DGA-003} & Encoded shape, but invalid base32, version, length, or checksum & DNS query & Self-test \\
+\texttt{T5-DGA-004} & Same decoded label from a second source address & DNS query & Self-test \\
+\texttt{T5-BCN-001} & Stable interval across successive check-ins & DNS timing & Demo \\
+\texttt{T5-C2-001} & First contact with a new destination & Any flow & Demo \\
+\texttt{T5-C2-002} & Improvement Program POST to a non-global address, or an \texttt{Orion/} agent & HTTP & Demo \\
+\texttt{T5-EXFIL-001} & POST above 4 KB to a non-global address & HTTP & Optional collect \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The check-in label decodes to a host name, user, uid, mode byte, and CRC-16. The interval between queries stays close to four seconds, and each active check-in produces an Improvement Program POST. Once captured, the check-in is decodable and periodic, and the telemetry upload is visible on the wire.
+
+The sensor also records CNAME responses. Mandiant treats a CNAME resolution as a stronger signal than a decoded label, because a decoded label shows that the implant ran while a CNAME can point to follow-on control~\cite{mandiant-sunburst-details}.

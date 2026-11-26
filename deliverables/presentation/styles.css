@@ -401,6 +401,16 @@ html, body {
   max-width: 900px;
 }
 
+.title-team {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: #d8d2c4;
+  max-width: 1000px;
+}
+
+.title-team p { margin: 0; }
+
 .title-meta {
   display: flex;
   gap: 26px;
@@ -511,7 +521,5 @@ button:focus-visible {
 
   nav, #progress, #notes { display: none !important; }
 
-  .kind-title { background: #fff !important; color: #17212b !important; }
-  .kind-title h1, .kind-title .title-claim { color: #17212b !important; }
-  .kind-title .title-sub, .kind-title .title-meta { color: #4a5563 !important; }
+
 }

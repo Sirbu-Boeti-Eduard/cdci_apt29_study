@@ -1,15 +1,15 @@
 \section{Countermeasures}
 \label{sec:countermeasures}
 
-Before signing, the controls address the build itself. Separating build infrastructure from office networks, restricting outbound traffic, using short-lived agents, and limiting who can change build jobs all reduce the opportunity SUNSPOT used. CISA recommends restricting access to code and build systems and separating build infrastructure from other networks (p.~12)~\cite{cisa-supply-chain}. Comparing a released artefact with an independently produced reference, or rebuilding from source and comparing hashes, targets the substitution directly. Neither proves the code is benign; a reproducible malicious build is still malicious.
+The controls that apply before signing concern the build itself. Separating build infrastructure from office networks, restricting outbound traffic, using short-lived agents, and limiting who can change build jobs all reduce the opportunity SUNSPOT used. CISA recommends restricting access to code and build systems and separating build infrastructure from other networks (p.~12)~\cite{cisa-supply-chain}. Comparing a released artefact with an independently produced reference, or rebuilding from source and comparing hashes, targets the substitution directly. Neither proves the code is benign; a reproducible malicious build is still malicious.
 
 At the customer, least privilege and restricted update permissions limit what an installed component can do. A traffic baseline is a detection control and belongs with the network monitoring below, not with prevention. Software bills of materials (SBOMs) and supplier assessments shorten the time to identify affected components but do not prevent the build compromise (pp.~7 and 13)~\cite{cisa-supply-chain}.
 
 After installation, detection depends on behaviour. DNS logging and anomaly analysis can show an unexpected check-in, and network baselines can separate vendor telemetry from a lookalike. Endpoint detection and response (EDR) has little to work with while a signed component behaves normally, but becomes useful when the operator acts. CISA's Orion guidance covers reviewing stored traffic for new external DNS domains and comparing a product's expected external communications with what is observed~\cite{cisa-aa20-352a,cisa-supply-chain}.
 
-HSM below means hardware security module, and MFA means multi-factor authentication. Table~\ref{tab:countermeasures} rates each control for expected effectiveness and deployment difficulty. The ratings are this article's judgement on a four-point scale (low, medium, high, very high), not measurements from the lab.
+HSM below means hardware security module, and MFA means multi-factor authentication. Table~\ref{tab:countermeasures} rates each control for expected effectiveness and deployment difficulty. The ratings are the report's judgement on a four-point scale (low, medium, high, very high), not measurements from the lab.
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 \footnotesize
 \hyphenpenalty=10000

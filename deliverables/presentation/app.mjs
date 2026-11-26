@@ -48,6 +48,7 @@ function bullets(slide) {
     list.append(cell);
   }
   body.append(list);
+  if (slide.statement) body.append(el("p", "statement", slide.statement));
   return body;
 }
 
@@ -180,6 +181,11 @@ function buildSlide(slide) {
     body.append(el("h1", "", slide.title));
     if (slide.claim) body.append(el("p", "title-claim", slide.claim));
     if (slide.subtitle) body.append(el("p", "title-sub", slide.subtitle));
+    if (slide.team) {
+      const team = el("div", "title-team");
+      for (const line of slide.team) team.append(el("p", "", line));
+      body.append(team);
+    }
     const metaRow = el("div", "title-meta");
     for (const item of slide.meta) metaRow.append(el("span", "", item));
     body.append(metaRow);
